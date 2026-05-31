@@ -138,11 +138,13 @@ export interface UserProfile {
   username: string;
   avatar: string | null;
   permission: boolean;
+  bio: string;
 }
 
 export interface UpdateProfileRequest {
   username?: string;
   avatar?: string | null;
+  bio?: string;
 }
 
 // ============================================================================
@@ -189,6 +191,14 @@ export interface Comment {
   id: number;
   content: string;
   parentId: number | null;
+  replyToId: number | null;
+  replyToContent: string;
+  replyTo?: {
+    id: number | null;
+    content: string | null;
+    deleted: boolean;
+  } | null;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   /** 登录用户的评论 */

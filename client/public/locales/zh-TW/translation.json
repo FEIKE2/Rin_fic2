@@ -103,7 +103,9 @@
     "reply": "回覆",
     "replying_to$name": "回覆 {{name}}",
     "cancel_reply": "取消回覆",
+    "deleted": "（已刪除）",
     "like": "點讚",
+    "parent_deleted": "被回覆的留言已刪除",
     "guest_name_required": "暱稱不能為空",
     "guest_name_placeholder": "暱稱（必填）",
     "guest_contact_placeholder": "聯絡方式（可選）"
@@ -187,7 +189,7 @@
     },
     "title": "目錄"
   },
-  "listed": "列出在文章中",
+  "listed": "顯示在帖文列表中",
   "load_more": "載入更多",
   "login": {
     "error": {
@@ -471,7 +473,7 @@
       },
       "preview": {
         "default": "緊湊卡片，顯示簡介和發布用戶，乾淨直接。",
-        "minimal": "極簡卡片，不顯示圖片，只顯示標題、簡介、更新日期和發布用戶。"
+        "minimal": "極簡卡片，不顯示圖片或正文，只顯示標題、更新日期和發布用戶。"
       }
     },
     "feed_layout": {
@@ -551,6 +553,7 @@
     "self_only": "僅自己可見"
   },
   "writing": "寫作",
+  "writing_upload": "上傳帖文",
   "year$year": "{{year}} 年",
   "profile": {
     "title": "個人資料",
@@ -559,6 +562,7 @@
     "username": "暱稱",
     "username_placeholder": "請輸入暱稱",
     "bio": "自我介紹",
+    "no_bio": "暫無簡介",
     "bio_placeholder": "介紹一下自己（60字以內）",
     "save": "儲存",
     "saving": "儲存中...",

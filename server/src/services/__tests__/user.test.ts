@@ -199,6 +199,20 @@ describe('UserService', () => {
             expect(data.username).toBe('user1');
             expect(data.avatar).toBe('avatar1.png');
             expect(data.permission).toBe(false);
+            expect(data.bio).toBe('');
+        });
+
+        it('should hide old literal bio placeholder', async () => {
+            sqlite.prepare(`UPDATE users SET bio = 'bio' WHERE id = 1`).run();
+
+            const res = await app.request('/profile', {
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer mock_token_1' }
+            }, env);
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            expect(data.bio).toBe('');
         });
 
         it('should return admin permission for admin user', async () => {
@@ -251,6 +265,67 @@ describe('UserService', () => {
             
             const dbResult = sqlite.prepare(`SELECT avatar FROM users WHERE id = 1`).all() as any[];
             expect(dbResult[0]?.avatar).toBe('https://new-avatar.png');
+        });
+
+        it('should clear avatar', async () => {
+            const res = await app.request('/profile', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ avatar: null }),
+            }, env);
+
+            expect(res.status).toBe(200);
+
+            const dbResult = sqlite.prepare(`SELECT avatar FROM users WHERE id = 1`).all() as any[];
+            expect(dbResult[0]?.avatar).toBeNull();
+        });
+
+        it('should reject empty username', async () => {
+            const res = await app.request('/profile', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username: '   ' }),
+            }, env);
+
+            expect(res.status).toBe(400);
+        });
+
+        it('should update bio', async () => {
+            const res = await app.request('/profile', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ bio: '新的简介' }),
+            }, env);
+
+            expect(res.status).toBe(200);
+
+            const dbResult = sqlite.prepare(`SELECT bio FROM users WHERE id = 1`).all() as any[];
+            expect(dbResult[0]?.bio).toBe('新的简介');
+        });
+
+        it('should sanitize old literal bio placeholder on update', async () => {
+            const res = await app.request('/profile', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ bio: 'bio' }),
+            }, env);
+
+            expect(res.status).toBe(200);
+
+            const dbResult = sqlite.prepare(`SELECT bio FROM users WHERE id = 1`).all() as any[];
+            expect(dbResult[0]?.bio).toBe('');
         });
 
         it('should require authentication', async () => {

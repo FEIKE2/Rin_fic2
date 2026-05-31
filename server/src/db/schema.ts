@@ -96,11 +96,14 @@ export const comments = sqliteTable("comments", {
     id: integer("id").primaryKey(),
     feedId: integer("feed_id").references(() => feeds.id, { onDelete: 'cascade' }).notNull(),
     parentId: integer("parent_id").references((): any => comments.id, { onDelete: 'cascade' }),
+    replyToId: integer("reply_to_id").references((): any => comments.id, { onDelete: 'set null' }),
+    replyToContent: text("reply_to_content").default("").notNull(),
     userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
     content: text("content").notNull(),
     guestName: text("guest_name").default(""),
     guestContact: text("guest_contact").default(""),
     approved: integer("approved").default(1).notNull(),
+    deletedAt: integer("deleted_at", { mode: 'timestamp' }),
     createdAt: created_at,
     updatedAt: updated_at,
 });
@@ -180,6 +183,14 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
     }),
     replies: many(comments, {
         relationName: "comment_replies",
+    }),
+    replyTarget: one(comments, {
+        fields: [comments.replyToId],
+        references: [comments.id],
+        relationName: "comment_reply_target",
+    }),
+    quotedBy: many(comments, {
+        relationName: "comment_reply_target",
     }),
     user: one(users, {
         fields: [comments.userId],

@@ -23,10 +23,7 @@ export function ProfilePage() {
         if (profile === null) { setLocation('/login'); return; }
         setUsername(profile.name || '');
         setAvatar(profile.avatar || '');
-        // Load bio from public profile
-        client.publicUser.get(profile.id).then(({ data }) => {
-            if (data) setBio(data.bio || '');
-        });
+        setBio(profile.bio || '');
     }, [profile, setLocation]);
 
     const handleSubmit = async () => {
@@ -37,8 +34,12 @@ export function ProfilePage() {
                 username: username.trim(),
                 avatar: avatar || null,
                 bio: bio.slice(0, 60),
-            } as any);
-            if (apiError) { setError(t('profile.error.update_failed')); setIsLoading(false); return; }
+            });
+            if (apiError) {
+                setError(`${t('profile.error.update_failed')}: ${apiError.value}`);
+                setIsLoading(false);
+                return;
+            }
             setSuccess(t('profile.success'));
             setTimeout(() => window.location.reload(), 1000);
         } catch { setError(t('profile.error.network')); }

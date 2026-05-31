@@ -65,10 +65,9 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
     const activeVariant = normalizeFeedCardVariant(variant ?? siteConfig.feedCardVariant);
 
     const body = activeVariant === "minimal" ? (
-        // 极简风：无图片，只显示标题、简介（如果有）、最后更新日期、发布用户
+        // 极简风：无图片和正文，只显示标题、最后更新日期、发布用户
         <div className="my-2 inline-block w-full break-inside-avoid rounded-2xl bg-w p-5 duration-300 bg-button">
             <h1 className="text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden">{title}</h1>
-            {summary ? <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 line-clamp-3">{summary}</p> : null}
             <p className="mt-3 text-xs text-gray-400 space-x-2">
                 <span title={new Date(updatedAt).toLocaleString()}>{t('feed_card.updated$time', { time: timeago(updatedAt) })}</span>
                 {user?.username ? <span>· {user.username}</span> : null}

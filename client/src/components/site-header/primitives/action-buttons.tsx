@@ -234,7 +234,7 @@ export function UserAvatar({
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
             >
               <i className="ri-edit-line" />
-              <span>{t("writing")}</span>
+              <span>{profile.permission ? t("writing") : t("writing_upload")}</span>
             </button>
             {hasBookmarks && !profile.permission && (
               <button

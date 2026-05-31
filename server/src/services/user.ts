@@ -165,6 +165,7 @@ export function UserService(): Hono {
             username: user.username,
             avatar: user.avatar,
             permission: user.permission === 1,
+            bio: normalizeBio(user.bio),
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
         });
@@ -195,16 +196,20 @@ export function UserService(): Hono {
             throw new ForbiddenError('Authentication required');
         }
 
-        const { username, avatar, bio } = body as { username?: string; avatar?: string; bio?: string };
+        const { username, avatar, bio } = body as { username?: string; avatar?: string | null; bio?: string };
 
-        if (!username && !avatar && bio === undefined) {
+        if (username === undefined && avatar === undefined && bio === undefined) {
             throw new BadRequestError('At least one field is required');
         }
 
-        const updateData: { username?: string; avatar?: string; bio?: string } = {};
-        if (username) updateData.username = username;
-        if (avatar) updateData.avatar = avatar;
-        if (bio !== undefined) updateData.bio = bio.slice(0, 60);
+        const updateData: { username?: string; avatar?: string | null; bio?: string } = {};
+        if (username !== undefined) {
+            const normalizedUsername = username.trim();
+            if (!normalizedUsername) throw new BadRequestError('Username is required');
+            updateData.username = normalizedUsername;
+        }
+        if (avatar !== undefined) updateData.avatar = avatar;
+        if (bio !== undefined) updateData.bio = normalizeBio(bio).slice(0, 60);
 
         await profileAsync(c, 'user_profile_update', () => db.update(users).set(updateData).where(eq(users.id, uid)));
 
@@ -258,7 +263,7 @@ export function UserService(): Hono {
             id: user.id,
             username: user.username,
             avatar: user.avatar,
-            bio: user.bio || "",
+            bio: normalizeBio(user.bio),
             feedCount: feedCount.count,
             totalPv,
             totalUv,
@@ -266,4 +271,9 @@ export function UserService(): Hono {
     });
 
     return app;
+}
+
+function normalizeBio(value: string | null | undefined) {
+    const bio = value?.trim() || "";
+    return bio.toLowerCase() === "bio" ? "" : bio;
 }

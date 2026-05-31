@@ -71,6 +71,7 @@ describe("UserAvatar", () => {
         avatar: "",
         permission: true,
         name: "admin",
+        bio: "",
       },
     });
 

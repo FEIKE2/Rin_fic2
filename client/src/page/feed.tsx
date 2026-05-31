@@ -21,6 +21,7 @@ import mermaid from "mermaid";
 import { AdjacentSection } from "../components/adjacent_feed.tsx";
 import { stripImageUrlMetadata } from "../utils/image-upload";
 import { EditHistoryModal } from "../components/edit-history-modal";
+import { UserAvatarLink } from "../components/user-hover-card";
 
 function extractFirstMarkdownImageUrl(content: string) {
   const match = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/.exec(content);
@@ -326,15 +327,12 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                     </div>
                   )}
                   <div className="flex flex-row items-center justify-between">
-                    <Link href={`/user/${feed.user.id}`} className="flex flex-row items-center gap-2 hover:opacity-80 transition-opacity">
-                      <img
-                        src={feed.user.avatar || "/avatar.png"}
-                        className="w-8 h-8 rounded-full"
-                      />
+                    <div className="flex flex-row items-center gap-2">
+                      <UserAvatarLink user={feed.user} className="h-8 w-8 rounded-full" />
                       <span className="text-gray-400 text-sm">
                         {feed.user.username}
                       </span>
-                    </Link>
+                    </div>
                     <LikeBookmarkBar feedId={feed.id} />
                   </div>
                 </div>
@@ -478,6 +476,7 @@ function CommentInput({
     if (error === "Unauthorized") return t("login.required");
     else if (error === "Content is required") return t("comment.empty");
     else if (error === "Guest name is required") return t("comment.guest_name_required");
+    else if (error === "Parent comment has been deleted") return t("comment.parent_deleted");
     return error;
   }
   function submit() {
@@ -693,7 +692,7 @@ function CommentItem({
   const [likes, setLikes] = useState(comment.likes ?? 0);
   const [liked, setLiked] = useState(comment.liked ?? false);
   const commenterName = comment.user?.username || comment.guestName || t("anonymous");
-  const commenterAvatar = comment.user?.avatar || "/avatar.png";
+  const isDeleted = Boolean(comment.deletedAt);
 
   useEffect(() => {
     setLikes(comment.likes ?? 0);
@@ -720,6 +719,7 @@ function CommentItem({
   }
 
   async function toggleLike() {
+    if (isDeleted) return;
     const { data, error } = await client.comment.toggleLike(comment.id);
     if (error) {
       showAlert(error.value as string);
@@ -733,10 +733,14 @@ function CommentItem({
   }
 
   return (
-    <div className={`flex flex-row items-start rounded-xl mt-2 ${nested ? "ml-8" : ""}`}>
-      <img
-        src={commenterAvatar}
-        className={`${nested ? "w-7 h-7" : "w-8 h-8"} rounded-full mt-4`}
+    <div
+      id={`comment-${comment.id}`}
+      style={{ scrollMarginTop: "var(--header-scroll-offset)" }}
+      className={`flex flex-row items-start rounded-xl mt-2 ${nested ? "ml-8" : ""}`}
+    >
+      <UserAvatarLink
+        user={comment.user}
+        className={`${nested ? "h-7 w-7" : "h-8 w-8"} rounded-full mt-4`}
       />
       <div className="flex flex-col flex-1 w-0 ml-2 bg-w rounded-xl p-4">
         <div className="flex flex-row">
@@ -751,9 +755,14 @@ function CommentItem({
             {timeago(comment.createdAt)}
           </span>
         </div>
-        <p className="t-primary break-words">{comment.content}</p>
+        <CommentQuote replyTo={comment.replyTo} />
+        {isDeleted ? (
+          <p className="text-sm italic text-neutral-500 dark:text-neutral-400">{t("comment.deleted")}</p>
+        ) : (
+          <p className="t-primary break-words">{comment.content}</p>
+        )}
         <div className="flex flex-row items-center justify-end gap-2">
-          {profile ? (
+          {!isDeleted && profile ? (
             <button
               onClick={toggleLike}
               className={`flex items-center gap-1 px-2 py bg-secondary rounded-full text-sm transition-colors ${liked ? "text-theme" : "t-secondary hover:text-theme"}`}
@@ -762,19 +771,21 @@ function CommentItem({
               <i className={liked ? "ri-heart-fill" : "ri-heart-line"} />
               {likes > 0 && <span>{likes}</span>}
             </button>
-          ) : likes > 0 ? (
+          ) : !isDeleted && likes > 0 ? (
             <span className="flex items-center gap-1 px-2 py text-sm t-secondary">
               <i className="ri-heart-line" />
               <span>{likes}</span>
             </span>
           ) : null}
-          <button
-            onClick={() => setIsReplying(true)}
-            className="px-2 py bg-secondary rounded-full text-sm t-secondary hover:text-theme"
-          >
-            {t("comment.reply")}
-          </button>
-          {(profile?.permission || (comment.user && profile?.id == comment.user.id)) && (
+          {!isDeleted && (
+            <button
+              onClick={() => setIsReplying(true)}
+              className="px-2 py bg-secondary rounded-full text-sm t-secondary hover:text-theme"
+            >
+              {t("comment.reply")}
+            </button>
+          )}
+          {!isDeleted && (profile?.permission || (comment.user && profile?.id == comment.user.id)) && (
             <Popup
               arrow={false}
               trigger={
@@ -824,5 +835,36 @@ function CommentItem({
       <ConfirmUI />
       <AlertUI />
     </div>
+  );
+}
+
+function CommentQuote({
+  replyTo,
+}: {
+  replyTo?: Comment["replyTo"];
+}) {
+  const { t } = useTranslation();
+  if (!replyTo) return null;
+
+  const quote = replyTo.deleted || !replyTo.content ? (
+    <span className="italic">{t("comment.deleted")}</span>
+  ) : (
+    replyTo.content
+  );
+
+  const content = (
+    <blockquote className="my-2 border-l-4 border-theme/40 bg-secondary px-3 py-2 text-sm text-neutral-600 transition-colors hover:border-theme dark:text-neutral-300">
+      <p className="line-clamp-2 break-words">{quote}</p>
+    </blockquote>
+  );
+
+  if (!replyTo.id || replyTo.deleted) {
+    return content;
+  }
+
+  return (
+    <a href={`#comment-${replyTo.id}`} className="block">
+      {content}
+    </a>
   );
 }

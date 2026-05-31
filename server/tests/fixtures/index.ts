@@ -29,6 +29,7 @@ export function createMockDB() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             avatar TEXT,
+            bio TEXT DEFAULT '',
             openid TEXT NOT NULL,
             password TEXT,
             permission INTEGER DEFAULT 0,
@@ -111,15 +112,19 @@ export function createMockDB() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             feed_id INTEGER NOT NULL,
             parent_id INTEGER,
+            reply_to_id INTEGER,
+            reply_to_content TEXT DEFAULT '' NOT NULL,
             user_id INTEGER,
             content TEXT NOT NULL,
             guest_name TEXT DEFAULT '',
             guest_contact TEXT DEFAULT '',
             approved INTEGER DEFAULT 1 NOT NULL,
+            deleted_at INTEGER,
             created_at INTEGER DEFAULT (unixepoch()),
             updated_at INTEGER DEFAULT (unixepoch()),
             FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
             FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE,
+            FOREIGN KEY (reply_to_id) REFERENCES comments(id) ON DELETE SET NULL,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 

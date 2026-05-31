@@ -103,7 +103,9 @@
     "reply": "回复",
     "replying_to$name": "回复 {{name}}",
     "cancel_reply": "取消回复",
+    "deleted": "（被删除）",
     "like": "点赞",
+    "parent_deleted": "被回复的评论已删除",
     "guest_name_required": "昵称不能为空",
     "guest_name_placeholder": "昵称（必填）",
     "guest_contact_placeholder": "联系方式（可选）"
@@ -187,7 +189,7 @@
     },
     "title": "目录"
   },
-  "listed": "列出在文章中",
+  "listed": "显示在帖文列表中",
   "load_more": "加载更多",
   "login": {
     "error": {
@@ -471,7 +473,7 @@
       },
       "preview": {
         "default": "紧凑卡片，显示简介和发布用户，干净直接。",
-        "minimal": "极简卡片，不显示图片，只显示标题、简介、更新日期和发布用户。"
+        "minimal": "极简卡片，不显示图片或正文，只显示标题、更新日期和发布用户。"
       }
     },
     "feed_layout": {
@@ -551,6 +553,7 @@
     "self_only": "仅自己可见"
   },
   "writing": "写作",
+  "writing_upload": "上传帖文",
   "year$year": "{{year}} 年",
   "profile": {
     "title": "个人资料",
@@ -559,6 +562,7 @@
     "username": "昵称",
     "username_placeholder": "请输入昵称",
     "bio": "自我介绍",
+    "no_bio": "暂无简介",
     "bio_placeholder": "介绍一下自己（60字以内）",
     "save": "保存",
     "saving": "保存中...",

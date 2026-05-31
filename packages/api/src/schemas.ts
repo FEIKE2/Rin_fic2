@@ -54,6 +54,7 @@ export const loginSchema = t.Object({
 export const updateProfileSchema = t.Object({
   username: t.String({ optional: true }),
   avatar: t.String({ optional: true }),
+  bio: t.String({ optional: true }),
 });
 
 // ============================================================================

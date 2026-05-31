@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import { fixTopField, getMigrationFileVersion, getMigrationVersion, isInfoExist, updateMigrationVersion } from "../lib/db-migration";
+import { fixTopField, fixUserBioField, getMigrationFileVersion, getMigrationVersion, isInfoExist, updateMigrationVersion } from "../lib/db-migration";
 
 export async function runLocalDbMigrate(dbName = "rin") {
   const sqlDir = path.join(process.cwd(), "server", "sql");
@@ -44,4 +44,5 @@ export async function runLocalDbMigrate(dbName = "rin") {
   }
 
   await fixTopField(type, dbName, infoExists);
+  await fixUserBioField(type, dbName);
 }

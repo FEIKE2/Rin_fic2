@@ -36,6 +36,7 @@ export function useAppBootstrap() {
           avatar: data.avatar || "",
           permission: data.permission,
           name: data.username,
+          bio: data.bio || "",
         });
       } else if (error) {
         setProfile(null);

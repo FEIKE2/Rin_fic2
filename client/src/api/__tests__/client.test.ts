@@ -219,6 +219,7 @@ describe('API Client', () => {
         username: 'testuser',
         avatar: 'avatar.png',
         permission: false,
+        bio: '',
       }
 
       mockFetch.mockResolvedValueOnce(createMockResponse({

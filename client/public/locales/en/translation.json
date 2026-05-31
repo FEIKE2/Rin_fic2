@@ -103,7 +103,9 @@
     "reply": "Reply",
     "replying_to$name": "Reply to {{name}}",
     "cancel_reply": "Cancel reply",
+    "deleted": "(deleted)",
     "like": "Like",
+    "parent_deleted": "The comment you are replying to has been deleted",
     "guest_name_required": "Guest name is required",
     "guest_name_placeholder": "Name (required)",
     "guest_contact_placeholder": "Contact (optional)"
@@ -187,7 +189,7 @@
     },
     "title": "Index"
   },
-  "listed": "Listed in articles",
+  "listed": "Show in post list",
   "load_more": "Load More",
   "login": {
     "error": {
@@ -471,7 +473,7 @@
       },
       "preview": {
         "default": "Compact card showing summary and author, clean and direct.",
-        "minimal": "Minimal card with no image, showing only title, summary, update date, and author."
+        "minimal": "Minimal card with no image or body text, showing only title, update date, and author."
       }
     },
     "feed_layout": {
@@ -551,6 +553,7 @@
     "self_only": "Visible to self only"
   },
   "writing": "Writing",
+  "writing_upload": "Upload Post",
   "year$year": "{{year}}",
   "profile": {
     "title": "Profile",
@@ -559,6 +562,7 @@
     "username": "Username",
     "username_placeholder": "Enter your username",
     "bio": "Bio",
+    "no_bio": "No bio yet",
     "bio_placeholder": "Tell us about yourself (max 60 characters)",
     "save": "Save",
     "saving": "Saving...",

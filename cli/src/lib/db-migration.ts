@@ -83,6 +83,59 @@ export async function fixTopField(type: "local" | "remote", db: string, infoExis
   }
 }
 
+export async function fixUserBioField(type: "local" | "remote", db: string) {
+  console.log("Check users bio field");
+  const table = await runWranglerJson([
+    "d1",
+    "execute",
+    db,
+    `--${type}`,
+    "--json",
+    "--command",
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='users'",
+  ]);
+
+  if (table[0].results.length === 0) {
+    console.log("users table not exists, skip bio field check");
+    return;
+  }
+
+  const result = await runWranglerJson([
+    "d1",
+    "execute",
+    db,
+    `--${type}`,
+    "--json",
+    "--command",
+    "SELECT name FROM pragma_table_info('users') WHERE name='bio'",
+  ]);
+
+  if (result[0].results.length === 0) {
+    console.log("Adding bio field to users table");
+    await runWranglerQuiet([
+      "d1",
+      "execute",
+      db,
+      `--${type}`,
+      "--json",
+      "--command",
+      "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''",
+    ]);
+  } else {
+    console.log("Bio field already exists in users table");
+  }
+
+  await runWranglerQuiet([
+    "d1",
+    "execute",
+    db,
+    `--${type}`,
+    "--json",
+    "--command",
+    "UPDATE users SET bio='' WHERE lower(trim(bio))='bio'",
+  ]);
+}
+
 export async function isInfoExist(type: "local" | "remote", db: string) {
   const result = await runWranglerJson([
     "d1",

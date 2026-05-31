@@ -1,7 +1,7 @@
 import { $ } from "bun";
 import { readdir, unlink } from "node:fs/promises";
 import stripIndent from "strip-indent";
-import { fixTopField, getMigrationFileVersion, getMigrationVersion, isInfoExist, updateMigrationVersion } from "../lib/db-migration";
+import { fixTopField, fixUserBioField, getMigrationFileVersion, getMigrationVersion, isInfoExist, updateMigrationVersion } from "../lib/db-migration";
 const bunExec = process.execPath;
 
 function env(name: string, defaultValue?: string, required = false) {
@@ -288,6 +288,7 @@ export async function runCloudflareDeploy(target: "all" | "server" | "client" = 
     }
   }
   await fixTopField("remote", dbName, infoExists);
+  await fixUserBioField("remote", dbName);
 
   if (target === "server") {
     await $`${bunExec} x wrangler deploy`;

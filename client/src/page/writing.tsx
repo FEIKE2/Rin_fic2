@@ -277,6 +277,7 @@ export function WritingPage({ id }: { id?: number }) {
               setValue={setSummary}
               placeholder={t("summary")}
               variant="flat"
+              className="lg:col-span-2"
             />
             {isAdmin && <Input
               id={id}

@@ -4,6 +4,7 @@ import { client } from "../app/runtime";
 import { Waiting } from "../components/loading";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 import { FeedCard } from "../components/feed_card";
+import { UserAvatarLink } from "../components/user-hover-card";
 
 type PublicUser = {
     id: number;
@@ -42,7 +43,7 @@ export function UserHomePage({ userId }: { userId: number }) {
                 <div className="wauto flex flex-col gap-4 py-4">
                     <div className="rounded-2xl bg-w p-6">
                         <div className="flex items-center gap-4">
-                            <img src={user.avatar || "/avatar.png"} alt={user.username} className="h-16 w-16 rounded-full object-cover" />
+                            <UserAvatarLink user={user} className="h-16 w-16 rounded-full" />
                             <div>
                                 <h1 className="text-xl font-bold t-primary">{user.username}</h1>
                                 {user.bio && <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{user.bio}</p>}

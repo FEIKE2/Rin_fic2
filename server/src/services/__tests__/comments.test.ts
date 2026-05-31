@@ -192,6 +192,8 @@ describe('CommentService', () => {
             expect(parent.replies).toHaveLength(1);
             expect(parent.replies[0].content).toBe('Reply to comment');
             expect(parent.replies[0].parentId).toBe(1);
+            expect(parent.replies[0].replyTo.id).toBe(1);
+            expect(parent.replies[0].replyTo.content).toBe('Comment 1 on feed 1');
         });
 
         it('should flatten replies to replies under the top-level parent', async () => {
@@ -213,6 +215,9 @@ describe('CommentService', () => {
 
             const row = sqlite.prepare(`SELECT parent_id FROM comments WHERE content = 'Reply to reply'`).get() as any;
             expect(row.parent_id).toBe(1);
+            const reply = sqlite.prepare(`SELECT reply_to_id, reply_to_content FROM comments WHERE content = 'Reply to reply'`).get() as any;
+            expect(reply.reply_to_id).toBe(10);
+            expect(reply.reply_to_content).toBe('First reply');
         });
 
         it('should reject replies to comments from another feed', async () => {
@@ -227,6 +232,22 @@ describe('CommentService', () => {
 
             expect(res.status).toBe(400);
             expect(await res.text()).toContain('Parent comment not found');
+        });
+
+        it('should reject replies to deleted comments', async () => {
+            sqlite.exec(`UPDATE comments SET deleted_at = unixepoch(), content = '' WHERE id = 1`);
+
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Reply to deleted comment', parentId: 1 }),
+            }, env);
+
+            expect(res.status).toBe(400);
+            expect(await res.text()).toContain('Parent comment has been deleted');
         });
 
         it('should return 400 when not authenticated and guest name missing', async () => {
@@ -354,6 +375,17 @@ describe('CommentService', () => {
 
             expect(res.status).toBe(404);
         });
+
+        it('should reject liking a deleted comment', async () => {
+            sqlite.exec(`UPDATE comments SET deleted_at = unixepoch(), content = '' WHERE id = 1`);
+
+            const res = await app.request('/1/like', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer mock_token_1' },
+            }, env);
+
+            expect(res.status).toBe(400);
+        });
     });
 
     describe('DELETE /:id - Delete comment', () => {
@@ -365,9 +397,10 @@ describe('CommentService', () => {
 
             expect(res.status).toBe(200);
             
-            // Verify comment was deleted
-            const dbResult = sqlite.prepare(`SELECT * FROM comments WHERE id = 1`).all();
-            expect(dbResult.length).toBe(0);
+            // Verify comment was soft-deleted so reply quotes can keep their target.
+            const dbResult = sqlite.prepare(`SELECT content, deleted_at FROM comments WHERE id = 1`).get() as any;
+            expect(dbResult.content).toBe('');
+            expect(dbResult.deleted_at).toBeNumber();
         });
 
         it('should allow admin to delete any comment', async () => {
@@ -377,6 +410,8 @@ describe('CommentService', () => {
             }, env);
 
             expect(res.status).toBe(200);
+            const dbResult = sqlite.prepare(`SELECT deleted_at FROM comments WHERE id = 1`).get() as any;
+            expect(dbResult.deleted_at).toBeNumber();
         });
 
         it('should deny deletion by other users', async () => {
@@ -401,6 +436,30 @@ describe('CommentService', () => {
             }, env);
 
             expect(res.status).toBe(404);
+        });
+
+        it('should keep quote markup but mark quoted content as deleted', async () => {
+            sqlite.exec(`
+                INSERT INTO comments (id, feed_id, parent_id, reply_to_id, reply_to_content, user_id, content, created_at)
+                VALUES (10, 1, 1, 1, 'Comment 1 on feed 1', 2, 'Reply quoting comment 1', unixepoch())
+            `);
+
+            const deleteRes = await app.request('/1', {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer mock_token_2' },
+            }, env);
+            expect(deleteRes.status).toBe(200);
+
+            const listRes = await app.request('/1', { method: 'GET' }, env);
+            const data = await listRes.json() as any[];
+            const parent = data.find((comment) => comment.id === 1);
+            const reply = parent.replies.find((comment: any) => comment.id === 10);
+
+            expect(reply.replyTo).toEqual({
+                id: 1,
+                content: null,
+                deleted: true,
+            });
         });
     });
 });

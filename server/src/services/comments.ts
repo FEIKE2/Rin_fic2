@@ -25,6 +25,7 @@ export function CommentService(): Hono {
         }));
 
         const commentIds = comment_list.map((comment: any) => comment.id);
+        const commentById = new Map(comment_list.map((comment: any) => [comment.id, comment]));
         const likeCounts = new Map<number, number>();
         const likedIds = new Set<number>();
 
@@ -65,6 +66,7 @@ export function CommentService(): Hono {
                 ...c,
                 likes: likeCounts.get(c.id) ?? 0,
                 liked: likedIds.has(c.id),
+                replyTo: buildReplyTarget(c, commentById),
                 replies: [],
             };
 
@@ -110,6 +112,8 @@ export function CommentService(): Hono {
         const body = await profileAsync(c, 'comment_create_parse', () => c.req.json());
         const { content, guestName, guestContact } = body;
         let parentId = body.parentId ? Number(body.parentId) : null;
+        let replyToId: number | null = null;
+        let replyToContent = "";
         
         if (!content) {
             return c.text('Content is required', 400);
@@ -130,8 +134,14 @@ export function CommentService(): Hono {
                 return c.text('Parent comment not found', 400);
             }
 
+            if (parent.deletedAt) {
+                return c.text('Parent comment has been deleted', 400);
+            }
+
             // 微信式单层回复：回复别人的回复时，也挂到顶层评论下面。
             parentId = parent.parentId ?? parent.id;
+            replyToId = parent.id;
+            replyToContent = parent.content;
         }
 
         // 登录用户评论
@@ -144,6 +154,8 @@ export function CommentService(): Hono {
             await db.insert(comments).values({
                 feedId,
                 parentId,
+                replyToId,
+                replyToContent,
                 userId: uid,
                 content
             });
@@ -183,6 +195,8 @@ export function CommentService(): Hono {
         await db.insert(comments).values({
             feedId,
             parentId,
+            replyToId,
+            replyToContent,
             userId: null,
             content,
             guestName: guestName.trim(),
@@ -234,6 +248,10 @@ export function CommentService(): Hono {
             return c.text('Not found', 404);
         }
 
+        if (comment.deletedAt) {
+            return c.text('Comment has been deleted', 400);
+        }
+
         const existing = await profileAsync(c, 'comment_like_existing', () =>
             db.query.commentLikes.findFirst({
                 where: and(eq(commentLikes.commentId, id), eq(commentLikes.userId, uid)),
@@ -271,7 +289,11 @@ export function CommentService(): Hono {
         
         // 管理员可删任意评论；普通用户只能删自己的
         if (admin) {
-            await db.delete(comments).where(eq(comments.id, id_num));
+            await db.update(comments).set({
+                content: "",
+                deletedAt: new Date(),
+                updatedAt: new Date(),
+            }).where(eq(comments.id, id_num));
             return c.text('OK');
         }
         
@@ -279,9 +301,35 @@ export function CommentService(): Hono {
             return c.text('Permission denied', 403);
         }
         
-        await db.delete(comments).where(eq(comments.id, id_num));
+        await db.update(comments).set({
+            content: "",
+            deletedAt: new Date(),
+            updatedAt: new Date(),
+        }).where(eq(comments.id, id_num));
         return c.text('OK');
     });
 
     return app;
+}
+
+function buildReplyTarget(comment: any, commentById: Map<number, any>) {
+    if (!comment.replyToId && !comment.replyToContent) {
+        return null;
+    }
+
+    const target = comment.replyToId ? commentById.get(comment.replyToId) : null;
+    if (target) {
+        const deleted = Boolean(target.deletedAt);
+        return {
+            id: target.id,
+            content: deleted ? null : target.content,
+            deleted,
+        };
+    }
+
+    return {
+        id: null,
+        content: null,
+        deleted: true,
+    };
 }

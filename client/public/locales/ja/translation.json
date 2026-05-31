@@ -103,7 +103,9 @@
     "reply": "返信",
     "replying_to$name": "{{name}} に返信",
     "cancel_reply": "返信をキャンセル",
+    "deleted": "（削除済み）",
     "like": "いいね",
+    "parent_deleted": "返信先のコメントは削除されました",
     "guest_name_required": "ゲスト名は必須です",
     "guest_name_placeholder": "名前（必須）",
     "guest_contact_placeholder": "連絡先（任意）"
@@ -187,7 +189,7 @@
     },
     "title": "目次"
   },
-  "listed": "記事にリスト",
+  "listed": "投稿一覧に表示",
   "load_more": "もっと読み込む",
   "login": {
     "oauth_only": "続行するにはログインしてください",
@@ -462,7 +464,7 @@
       },
       "preview": {
         "default": "概要と投稿者を表示するコンパクトなカードです。",
-        "minimal": "画像なし、タイトル・概要・更新日・投稿者のみ表示するミニマルなカードです。"
+        "minimal": "画像や本文を表示せず、タイトル・更新日・投稿者のみ表示するミニマルなカードです。"
       }
     },
     "feed_layout": {
@@ -542,6 +544,7 @@
     "self_only": "自分のみ可視"
   },
   "writing": "執筆",
+  "writing_upload": "投稿をアップロード",
   "year$year": "{{year}} 年",
   "profile": {
     "title": "プロフィール",
@@ -550,6 +553,7 @@
     "username": "ユーザー名",
     "username_placeholder": "ユーザー名を入力してください",
     "bio": "自己紹介",
+    "no_bio": "自己紹介はまだありません",
     "bio_placeholder": "自己紹介を入力してください（60文字以内）",
     "save": "保存",
     "saving": "保存中...",
