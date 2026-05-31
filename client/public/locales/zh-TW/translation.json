@@ -139,6 +139,7 @@
     "github_callback": "GitHub OAuth 回調地址應為 `https://<Worker 地址>/api/user/github/callback`，請檢查 GitHub OAuth 回調地址是否正確",
     "not_found": "頁面未找到",
     "permission_denied": "權限不足",
+    "login_required": "請先登錄",
     "title": "錯誤"
   },
   "feed_card": {

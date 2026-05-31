@@ -139,6 +139,7 @@
     "github_callback": "GitHub OAuth callback URL should be `https://<Worker address>/api/user/github/callback`. Please check if the GitHub OAuth callback URL is correct.",
     "not_found": "Page not found",
     "permission_denied": "Permission denied",
+    "login_required": "Please login first",
     "title": "Error"
   },
   "feed_card": {

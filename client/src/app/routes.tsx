@@ -80,11 +80,12 @@ export function AppRoutes() {
         <CompatTasksPage />
       </AdminRoute>
 
-      <AdminRoute path="/admin/writing" requirePermission title={t("writing")} description={t("admin.writing_description")}>
+      {/* 所有登录用户都可以写文章 */}
+      <AdminRoute path="/admin/writing" requireLogin title={t("writing")} description={t("admin.writing_description")}>
         <WritingPage />
       </AdminRoute>
 
-      <AdminRoute path="/admin/writing/:id" requirePermission title={t("writing")} description={t("admin.writing_description")}>
+      <AdminRoute path="/admin/writing/:id" requireLogin title={t("writing")} description={t("admin.writing_description")}>
         {({ id }) => <WritingPage id={tryInt(0, id)} />}
       </AdminRoute>
 
@@ -174,19 +175,27 @@ function AdminRoute({
   path,
   children,
   requirePermission,
+  requireLogin,
   title,
   description,
 }: {
   path: PathPattern;
   children: ReactNode | ((params: DefaultParams) => ReactNode);
   requirePermission?: boolean;
+  requireLogin?: boolean;
   title: string;
   description: string;
 }) {
   const profile = useContext(ProfileContext);
   const { t } = useTranslation();
-  const content =
-    requirePermission && !profile?.permission ? <ErrorPage error={t("error.permission_denied")} /> : children;
+  
+  // 检查权限：requirePermission 需要管理员，requireLogin 只需要登录
+  let content = children;
+  if (requirePermission && !profile?.permission) {
+    content = <ErrorPage error={t("error.permission_denied")} />;
+  } else if (requireLogin && !profile) {
+    content = <ErrorPage error={t("error.login_required")} />;
+  }
 
   return (
     <Route path={path}>

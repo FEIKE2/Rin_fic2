@@ -59,12 +59,9 @@ export function MomentsService(): Hono {
         const body = await profileAsync(c, 'moments_create_parse', () => c.req.json());
         const { content } = body;
         
+        // 允许所有登录用户创建 moments
         if (!uid) {
-            return c.text('Unauthorized', 401);
-        }
-        
-        if (!admin) {
-            return c.text('Permission denied', 403);
+            return c.text('Authentication required', 401);
         }
         
         if (!content) {
@@ -96,11 +93,7 @@ export function MomentsService(): Hono {
         const { content } = body;
         
         if (!uid) {
-            return c.text('Unauthorized', 401);
-        }
-        
-        if (!admin) {
-            return c.text('Permission denied', 403);
+            return c.text('Authentication required', 401);
         }
         
         const id_num = parseInt(id);
@@ -108,6 +101,11 @@ export function MomentsService(): Hono {
         
         if (!moment) {
             return c.text('Not found', 404);
+        }
+        
+        // 允许作者本人或管理员修改
+        if (moment.uid !== uid && !admin) {
+            return c.text('Permission denied', 403);
         }
         
         if (!content) {
@@ -132,11 +130,7 @@ export function MomentsService(): Hono {
         const id = c.req.param('id');
         
         if (!uid) {
-            return c.text('Unauthorized', 401);
-        }
-        
-        if (!admin) {
-            return c.text('Permission denied', 403);
+            return c.text('Authentication required', 401);
         }
         
         const id_num = parseInt(id);
@@ -144,6 +138,11 @@ export function MomentsService(): Hono {
         
         if (!moment) {
             return c.text('Not found', 404);
+        }
+        
+        // 允许作者本人或管理员删除
+        if (moment.uid !== uid && !admin) {
+            return c.text('Permission denied', 403);
         }
         
         await profileAsync(c, 'moments_delete_db', () => db.delete(moments).where(eq(moments.id, id_num)));

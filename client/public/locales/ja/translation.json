@@ -139,6 +139,7 @@
     "github_callback": "GitHub OAuthコールバックURLは`https://<Workerアドレス>/api/user/github/callback`である必要があります。GitHub OAuthコールバックURLが正しいか確認してください。",
     "not_found": "ページが見つかりません",
     "permission_denied": "権限がありません",
+    "login_required": "ログインしてください",
     "title": "エラー"
   },
   "feed_card": {

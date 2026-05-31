@@ -131,8 +131,9 @@ export function FeedService(): Hono<{
         const body = await profileAsync(c, 'feed_create_parse', () => c.req.json());
         const { title, alias, listed, content, summary, draft, tags, createdAt } = body;
 
-        if (!admin) {
-            return c.text('Permission denied', 403);
+        // 允许所有登录用户创建文章
+        if (!uid) {
+            return c.text('Authentication required', 401);
         }
 
         if (!title) {

@@ -216,16 +216,27 @@ export function UserAvatar({
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">{t("profile.title")}</p>
               </div>
             </button>
+            {/* 所有登录用户都可以发布内容 */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                setLocation("/admin/writing");
+              }}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <i className="ri-edit-line" />
+              <span>{t("writing")}</span>
+            </button>
             {profile.permission ? (
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  setLocation("/admin/writing");
+                  setLocation("/admin/settings");
                 }}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
               >
-                <i className="ri-dashboard-line" />
-                <span>{t("admin.title")}</span>
+                <i className="ri-settings-line" />
+                <span>{t("settings.title")}</span>
               </button>
             ) : null}
             <button
