@@ -1,10 +1,10 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { AppContext } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
 import { setJWTCookie } from "../core/hono-middleware";
-import { users } from "../db/schema";
+import { feeds, feedLikes, feedBookmarks, users, visitStats } from "../db/schema";
 import {
     BadRequestError,
     ForbiddenError,
@@ -195,19 +195,74 @@ export function UserService(): Hono {
             throw new ForbiddenError('Authentication required');
         }
 
-        const { username, avatar } = body as { username?: string; avatar?: string };
+        const { username, avatar, bio } = body as { username?: string; avatar?: string; bio?: string };
 
-        if (!username && !avatar) {
-            throw new BadRequestError('At least one field (username or avatar) is required');
+        if (!username && !avatar && bio === undefined) {
+            throw new BadRequestError('At least one field is required');
         }
 
-        const updateData: { username?: string; avatar?: string } = {};
+        const updateData: { username?: string; avatar?: string; bio?: string } = {};
         if (username) updateData.username = username;
         if (avatar) updateData.avatar = avatar;
+        if (bio !== undefined) updateData.bio = bio.slice(0, 60);
 
         await profileAsync(c, 'user_profile_update', () => db.update(users).set(updateData).where(eq(users.id, uid)));
 
         return c.json({ success: true });
+    });
+
+    // GET /user/:id - Public user profile
+    app.get('/:id', async (c: AppContext) => {
+        const db = c.get('db');
+        const id = parseInt(c.req.param('id'));
+        if (isNaN(id)) throw new BadRequestError('Invalid user id');
+
+        const user = await profileAsync(c, 'user_public_lookup', () => db.query.users.findFirst({ where: eq(users.id, id) }));
+        if (!user) throw new NotFoundError('User');
+
+        const [feedCount] = await profileAsync(c, 'user_feed_count', () =>
+            db.select({ count: count() }).from(feeds).where(and(eq(feeds.uid, id), eq(feeds.draft, 0), eq(feeds.listed, 1)))
+        );
+
+        // Sum pv/uv from visitStats for this user's feeds
+        const userFeeds = await profileAsync(c, 'user_feeds_ids', () =>
+            db.select({ id: feeds.id }).from(feeds).where(and(eq(feeds.uid, id), eq(feeds.draft, 0)))
+        );
+        const feedIds = userFeeds.map((f: { id: number }) => f.id);
+
+        let totalPv = 0;
+        let totalUv = 0;
+        if (feedIds.length > 0) {
+            const stats = await profileAsync(c, 'user_visit_stats', () =>
+                db
+                    .select({ pv: visitStats.pv, hllData: visitStats.hllData })
+                    .from(visitStats)
+                    .where(inArray(visitStats.feedId, feedIds))
+            );
+            for (const s of stats) {
+                totalPv += s.pv ?? 0;
+            }
+            // UV estimation: sum of HLL counts (approximate)
+            const { HyperLogLog } = await import('../utils/hyperloglog');
+            for (const s of stats) {
+                if (s.hllData) {
+                    try {
+                        const hll = new HyperLogLog(s.hllData);
+                        totalUv += Math.round(hll.count());
+                    } catch {}
+                }
+            }
+        }
+
+        return c.json({
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+            bio: user.bio || "",
+            feedCount: feedCount.count,
+            totalPv,
+            totalUv,
+        });
     });
 
     return app;

@@ -26,6 +26,8 @@ import { QueueStatusPage } from "../page/queue-status";
 import { SearchPage } from "../page/search";
 import { Settings } from "../page/settings";
 import { TimelinePage } from "../page/timeline";
+import { BookmarksPage } from "../page/bookmarks";
+import { UserHomePage } from "../page/user-home";
 import { WritingPage } from "../page/writing";
 import { ProfileContext } from "../state/profile";
 import { tryInt } from "../utils/int";
@@ -99,6 +101,14 @@ export function AppRoutes() {
 
       <AppRoute path="/profile">
         <ProfilePage />
+      </AppRoute>
+
+      <AppRoute path="/user/:id">
+        {(params) => <UserHomePage userId={parseInt(params.id || "0")} />}
+      </AppRoute>
+
+      <AppRoute path="/bookmarks">
+        <BookmarksPage />
       </AppRoute>
 
       <TocRoute path="/feed/:id">

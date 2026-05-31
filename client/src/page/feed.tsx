@@ -326,16 +326,17 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                       ))}
                     </div>
                   )}
-                  <div className="flex flex-row items-center">
-                    <img
-                      src={feed.user.avatar || "/avatar.png"}
-                      className="w-8 h-8 rounded-full"
-                    />
-                    <div className="ml-2">
-                      <span className="text-gray-400 text-sm cursor-default">
+                  <div className="flex flex-row items-center justify-between">
+                    <Link href={`/user/${feed.user.id}`} className="flex flex-row items-center gap-2 hover:opacity-80 transition-opacity">
+                      <img
+                        src={feed.user.avatar || "/avatar.png"}
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <span className="text-gray-400 text-sm">
                         {feed.user.username}
                       </span>
-                    </div>
+                    </Link>
+                    <LikeBookmarkBar feedId={feed.id} />
                   </div>
                 </div>
               </article>
@@ -365,6 +366,42 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
         />
       )}
     </Waiting>
+  );
+}
+
+function LikeBookmarkBar({ feedId }: { feedId: number }) {
+  const profile = useContext(ProfileContext);
+  const [likes, setLikes] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+
+  useEffect(() => {
+    client.interaction.get(feedId).then(({ data }) => {
+      if (data) { setLikes(data.likes); setLiked(data.liked); setBookmarked(data.bookmarked); }
+    });
+  }, [feedId]);
+
+  if (!profile) return null;
+
+  async function toggleLike() {
+    const { data } = await client.interaction.toggleLike(feedId);
+    if (data) { setLiked(data.liked); setLikes(l => data.liked ? l + 1 : l - 1); }
+  }
+  async function toggleBookmark() {
+    const { data } = await client.interaction.toggleBookmark(feedId);
+    if (data) setBookmarked(data.bookmarked);
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={toggleLike} className={`flex items-center gap-1 text-sm transition-colors ${liked ? "text-theme" : "text-gray-400 hover:text-theme"}`}>
+        <i className={liked ? "ri-heart-fill" : "ri-heart-line"} />
+        {likes > 0 && <span>{likes}</span>}
+      </button>
+      <button onClick={toggleBookmark} className={`flex items-center gap-1 text-sm transition-colors ${bookmarked ? "text-theme" : "text-gray-400 hover:text-theme"}`}>
+        <i className={bookmarked ? "ri-bookmark-fill" : "ri-bookmark-line"} />
+      </button>
+    </div>
   );
 }
 

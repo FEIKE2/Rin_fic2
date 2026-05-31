@@ -621,8 +621,40 @@ class WordPressAPI {
 }
 
 /**
- * RSS API methods - direct fetch for RSS feeds
+ * Interaction API methods (likes/bookmarks)
  */
+class InteractionAPI {
+  constructor(private http: HttpClient) {}
+
+  async get(feedId: number): Promise<ApiResponse<{ likes: number; liked: boolean; bookmarked: boolean }>> {
+    return this.http.get(`/api/interaction/${feedId}`);
+  }
+
+  async toggleLike(feedId: number): Promise<ApiResponse<{ liked: boolean }>> {
+    return this.http.post(`/api/interaction/${feedId}/like`);
+  }
+
+  async toggleBookmark(feedId: number): Promise<ApiResponse<{ bookmarked: boolean }>> {
+    return this.http.post(`/api/interaction/${feedId}/bookmark`);
+  }
+
+  async bookmarks(): Promise<ApiResponse<any[]>> {
+    return this.http.get(`/api/interaction/bookmarks/list`);
+  }
+}
+
+/**
+ * Public user profile API
+ */
+class PublicUserAPI {
+  constructor(private http: HttpClient) {}
+
+  async get(id: number): Promise<ApiResponse<{ id: number; username: string; avatar: string | null; bio: string; feedCount: number; totalPv: number; totalUv: number }>> {
+    return this.http.get(`/api/user/${id}`);
+  }
+}
+
+
 class RSSAPI {
   constructor(private baseUrl: string) {}
 
@@ -664,6 +696,8 @@ export class ApiClient {
   auth: AuthAPI;
   wp: WordPressAPI;
   rss: RSSAPI;
+  interaction: InteractionAPI;
+  publicUser: PublicUserAPI;
 
   constructor(baseUrl: string) {
     this.http = new HttpClient(baseUrl);
@@ -680,6 +714,8 @@ export class ApiClient {
     this.auth = new AuthAPI(this.http);
     this.wp = new WordPressAPI(this.http);
     this.rss = new RSSAPI(baseUrl);
+    this.interaction = new InteractionAPI(this.http);
+    this.publicUser = new PublicUserAPI(this.http);
   }
 }
 

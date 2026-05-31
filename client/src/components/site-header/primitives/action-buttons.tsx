@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactModal from "react-modal";
 import Popup from "reactjs-popup";
@@ -160,7 +160,16 @@ export function UserAvatar({
   const label = t("github_login");
   const config = useContext(ClientConfigContext);
   const [isOpen, setIsOpen] = useState(false);
+  const [hasBookmarks, setHasBookmarks] = useState(false);
   const shouldShowEntry = Boolean(profile) || config.getBoolean("login.enabled");
+
+  useEffect(() => {
+    if (profile && !profile.permission) {
+      client.interaction.bookmarks().then(({ data }) => {
+        if (data && data.length > 0) setHasBookmarks(true);
+      });
+    }
+  }, [profile]);
 
   return shouldShowEntry ? (
     <div className={className + " flex flex-row items-center"}>
@@ -227,6 +236,15 @@ export function UserAvatar({
               <i className="ri-edit-line" />
               <span>{t("writing")}</span>
             </button>
+            {hasBookmarks && !profile.permission && (
+              <button
+                onClick={() => { setIsOpen(false); setLocation("/bookmarks"); }}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                <i className="ri-bookmark-line" />
+                <span>{t("bookmarks")}</span>
+              </button>
+            )}
             {profile.permission ? (
               <button
                 onClick={() => {

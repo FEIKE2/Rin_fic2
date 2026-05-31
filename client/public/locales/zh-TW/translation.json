@@ -70,7 +70,7 @@
       "title": "搜尋",
       "title$keyword": "搜尋：{{keyword}}"
     },
-    "title": "文章",
+    "title": "帖文",
     "top": {
       "confirm": "確定置頂這篇文章嗎？",
       "success": "置頂成功",
@@ -459,15 +459,15 @@
       }
     },
     "feed_card": {
-      "title": "文章卡片樣式",
-      "desc": "選擇文章列表、搜尋結果與標籤頁中卡片的視覺風格",
+      "title": "帖文卡片樣式",
+      "desc": "選擇帖文列表、搜尋結果與標籤頁中卡片的視覺風格",
       "options": {
         "default": "預設",
-        "editorial": "雜誌風"
+        "minimal": "極簡風"
       },
       "preview": {
-        "default": "目前這套緊湊卡片，表面乾淨，裝飾最少。",
-        "editorial": "更有展示感的卡片，帶有淡淡主題染色、更強層次，以及類似畫冊的 framing。"
+        "default": "緊湊卡片，顯示簡介和發布用戶，乾淨直接。",
+        "minimal": "極簡卡片，不顯示圖片，只顯示標題、簡介、更新日期和發布用戶。"
       }
     },
     "feed_layout": {
@@ -554,6 +554,8 @@
     "avatar_hint": "支援填寫頭像 URL、上傳圖片或拖拽上傳（最大 2MB）",
     "username": "暱稱",
     "username_placeholder": "請輸入暱稱",
+    "bio": "自我介紹",
+    "bio_placeholder": "介紹一下自己（60字以內）",
     "save": "儲存",
     "saving": "儲存中...",
     "success": "儲存成功",
@@ -737,5 +739,6 @@
   "sort_latest": "最新",
   "sort_popular": "熱門",
   "total_tags": "共 {{count}} 個標籤",
+  "bookmarks": "已收藏",
   "anonymous": "匿名"
 }

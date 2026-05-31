@@ -69,9 +69,28 @@ export const users = sqliteTable("users", {
     avatar: text("avatar"),
     password: text("password"),
     permission: integer("permission").default(0),
+    bio: text("bio").default(""),
     createdAt: created_at,
     updatedAt: updated_at,
 });
+
+export const feedLikes = sqliteTable("feed_likes", {
+    id: integer("id").primaryKey(),
+    feedId: integer("feed_id").references(() => feeds.id, { onDelete: 'cascade' }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    createdAt: created_at,
+}, (table) => ({
+    uniq: unique().on(table.feedId, table.userId),
+}));
+
+export const feedBookmarks = sqliteTable("feed_bookmarks", {
+    id: integer("id").primaryKey(),
+    feedId: integer("feed_id").references(() => feeds.id, { onDelete: 'cascade' }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    createdAt: created_at,
+}, (table) => ({
+    uniq: unique().on(table.feedId, table.userId),
+}));
 
 export const comments = sqliteTable("comments", {
     id: integer("id").primaryKey(),
@@ -174,4 +193,14 @@ export const feedEditHistoryRelations = relations(feedEditHistory, ({ one }) => 
         fields: [feedEditHistory.userId],
         references: [users.id],
     }),
+}));
+
+export const feedLikesRelations = relations(feedLikes, ({ one }) => ({
+    feed: one(feeds, { fields: [feedLikes.feedId], references: [feeds.id] }),
+    user: one(users, { fields: [feedLikes.userId], references: [users.id] }),
+}));
+
+export const feedBookmarksRelations = relations(feedBookmarks, ({ one }) => ({
+    feed: one(feeds, { fields: [feedBookmarks.feedId], references: [feeds.id] }),
+    user: one(users, { fields: [feedBookmarks.userId], references: [users.id] }),
 }));

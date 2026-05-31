@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import _ from 'lodash';
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useContext, useEffect, useState} from "react";
 import {Helmet} from "react-helmet";
 import {useTranslation} from "react-i18next";
 import Loading from 'react-loading';
@@ -11,6 +11,7 @@ import { client } from "../app/runtime";
 import {Cache} from '../utils/cache';
 import {useSiteConfig} from "../hooks/useSiteConfig";
 import {siteName} from "../utils/constants";
+import { ProfileContext } from "../state/profile";
 import mermaid from 'mermaid';
 import { MarkdownEditor } from '../components/markdown_editor';
 
@@ -123,6 +124,8 @@ async function update({
 export function WritingPage({ id }: { id?: number }) {
   const { t } = useTranslation();
   const siteConfig = useSiteConfig();
+  const profile = useContext(ProfileContext);
+  const isAdmin = Boolean(profile?.permission);
   const cache = Cache.with(id);
   const [title, setTitle] = cache.useCache("title", "");
   const [summary, setSummary] = cache.useCache("summary", "");
@@ -275,13 +278,13 @@ export function WritingPage({ id }: { id?: number }) {
               placeholder={t("summary")}
               variant="flat"
             />
-            <Input
+            {isAdmin && <Input
               id={id}
               value={alias}
               setValue={setAlias}
               placeholder={t("alias")}
               variant="flat"
-            />
+            />}
             <Input
               id={id}
               value={tags}
