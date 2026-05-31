@@ -100,6 +100,10 @@
     "submit": "コメントを投稿",
     "success": "コメントに成功しました",
     "title": "コメント",
+    "reply": "返信",
+    "replying_to$name": "{{name}} に返信",
+    "cancel_reply": "返信をキャンセル",
+    "like": "いいね",
     "guest_name_required": "ゲスト名は必須です",
     "guest_name_placeholder": "名前（必須）",
     "guest_contact_placeholder": "連絡先（任意）"

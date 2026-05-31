@@ -190,6 +190,26 @@ describe('API Client', () => {
         })
       )
     })
+
+    it('should toggle comment like', async () => {
+      const mockResponse = { liked: true }
+
+      mockFetch.mockResolvedValueOnce(createMockResponse({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        json: async () => mockResponse,
+      }))
+
+      const result = await api.comment.toggleLike(1)
+
+      expect(result.data).toEqual(mockResponse)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost/api/comment/1/like',
+        expect.objectContaining({
+          method: 'POST',
+        })
+      )
+    })
   })
 
   describe('User API', () => {

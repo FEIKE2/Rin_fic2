@@ -110,16 +110,27 @@ export function createMockDB() {
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             feed_id INTEGER NOT NULL,
+            parent_id INTEGER,
             user_id INTEGER,
             content TEXT NOT NULL,
             guest_name TEXT DEFAULT '',
-            guest_email TEXT DEFAULT '',
-            guest_website TEXT DEFAULT '',
+            guest_contact TEXT DEFAULT '',
             approved INTEGER DEFAULT 1 NOT NULL,
             created_at INTEGER DEFAULT (unixepoch()),
             updated_at INTEGER DEFAULT (unixepoch()),
             FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS comment_likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            comment_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at INTEGER DEFAULT (unixepoch()),
+            FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(comment_id, user_id)
         );
 
         -- Hashtags table (note: named "hashtags" not "tags")

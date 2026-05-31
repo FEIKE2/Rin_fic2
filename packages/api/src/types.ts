@@ -188,6 +188,7 @@ export interface TagDetail extends Tag {
 export interface Comment {
   id: number;
   content: string;
+  parentId: number | null;
   createdAt: string;
   updatedAt: string;
   /** 登录用户的评论 */
@@ -203,10 +204,18 @@ export interface Comment {
   guestContact?: string;
   /** 审核状态 */
   approved: boolean;
+  /** 点赞数 */
+  likes: number;
+  /** 当前登录用户是否已点赞 */
+  liked: boolean;
+  /** 单层回复列表 */
+  replies?: Comment[];
 }
 
 export interface CreateCommentRequest {
   content: string;
+  /** 回复的父评论 ID */
+  parentId?: number;
   /** 游客昵称（未登录时必填） */
   guestName?: string;
   /** 游客联系方式（可选） */
@@ -358,6 +367,7 @@ export const API_PATHS = {
   COMMENT_LIST: (feedId: number) => `/api/comment/${feedId}`,
   COMMENT_CREATE: (feedId: number) => `/api/comment/${feedId}`,
   COMMENT_DELETE: (id: number) => `/api/comment/${id}`,
+  COMMENT_TOGGLE_LIKE: (id: number) => `/api/comment/${id}/like`,
 
   // Friend
   FRIEND_LIST: '/api/friend',

@@ -100,6 +100,10 @@
     "submit": "發表留言",
     "success": "留言成功",
     "title": "留言",
+    "reply": "回覆",
+    "replying_to$name": "回覆 {{name}}",
+    "cancel_reply": "取消回覆",
+    "like": "點讚",
     "guest_name_required": "暱稱不能為空",
     "guest_name_placeholder": "暱稱（必填）",
     "guest_contact_placeholder": "聯絡方式（可選）"

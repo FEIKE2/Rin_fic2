@@ -1,4 +1,4 @@
-import type { Feed } from "@rin/api";
+import type { Comment, Feed, FeedEditHistory } from "@rin/api";
 import { useContext, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,6 @@ import mermaid from "mermaid";
 import { AdjacentSection } from "../components/adjacent_feed.tsx";
 import { stripImageUrlMetadata } from "../utils/image-upload";
 import { EditHistoryModal } from "../components/edit-history-modal";
-import type { FeedEditHistory } from "@rin/api";
 
 function extractFirstMarkdownImageUrl(content: string) {
   const match = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/.exec(content);
@@ -453,9 +452,15 @@ export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
 function CommentInput({
   id,
   onRefresh,
+  parentId,
+  replyToName,
+  onCancel,
 }: {
   id: string;
   onRefresh: () => void;
+  parentId?: number;
+  replyToName?: string;
+  onCancel?: () => void;
 }) {
   const { t } = useTranslation();
   const [content, setContent] = useState("");
@@ -476,9 +481,14 @@ function CommentInput({
     return error;
   }
   function submit() {
+    const baseBody = {
+      content,
+      ...(parentId ? { parentId } : {}),
+    };
+
     if (profile) {
       client.comment
-        .create(parseInt(id), { content })
+        .create(parseInt(id), baseBody)
         .then(({ error }) => {
           if (error) {
             setError(errorHumanize(error.value as string));
@@ -487,6 +497,7 @@ function CommentInput({
             setError("");
             showAlert(t("comment.success"), () => {
               onRefresh();
+              onCancel?.();
             });
           }
         });
@@ -497,7 +508,7 @@ function CommentInput({
       }
       client.comment
         .create(parseInt(id), {
-          content,
+          ...baseBody,
           guestName: guestName.trim(),
           guestContact: guestContact.trim() || undefined,
         })
@@ -511,6 +522,7 @@ function CommentInput({
             setError("");
             showAlert(t("comment.success"), () => {
               onRefresh();
+              onCancel?.();
             });
           }
         });
@@ -519,24 +531,36 @@ function CommentInput({
     }
   }
   return (
-    <div className="w-full rounded-2xl bg-w t-primary p-6 items-end flex flex-col">
+    <div className={`w-full t-primary items-end flex flex-col ${parentId ? "" : "rounded-2xl bg-w p-6"}`}>
       <div className="flex flex-col w-full items-start mb-4">
-        <label htmlFor="comment">{t("comment.title")}</label>
+        <label htmlFor={parentId ? `comment-reply-${parentId}` : "comment"}>
+          {replyToName ? t("comment.replying_to$name", { name: replyToName }) : t("comment.title")}
+        </label>
       </div>
       {profile ? (<>
         <textarea
-          id="comment"
+          id={parentId ? `comment-reply-${parentId}` : "comment"}
           placeholder={t("comment.placeholder.title")}
           className="bg-w w-full h-24 rounded-lg"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
-        <button
-          className="mt-4 bg-theme text-white px-4 py-2 rounded-full"
-          onClick={submit}
-        >
-          {t("comment.submit")}
-        </button>
+        <div className="mt-4 flex gap-2">
+          {onCancel && (
+            <button
+              className="bg-secondary bg-button t-secondary px-4 py-2 rounded-full"
+              onClick={onCancel}
+            >
+              {t("comment.cancel_reply")}
+            </button>
+          )}
+          <button
+            className="bg-theme text-white px-4 py-2 rounded-full"
+            onClick={submit}
+          >
+            {parentId ? t("comment.reply") : t("comment.submit")}
+          </button>
+        </div>
       </>) : guestEnabled ? (<>
         <input
           type="text"
@@ -553,18 +577,28 @@ function CommentInput({
           onChange={(e) => setGuestContact(e.target.value)}
         />
         <textarea
-          id="comment"
+          id={parentId ? `comment-reply-${parentId}` : "comment"}
           placeholder={t("comment.placeholder.title")}
           className="bg-w w-full h-24 rounded-lg"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
-        <button
-          className="mt-4 bg-theme text-white px-4 py-2 rounded-full"
-          onClick={submit}
-        >
-          {t("comment.submit")}
-        </button>
+        <div className="mt-4 flex gap-2">
+          {onCancel && (
+            <button
+              className="bg-secondary bg-button t-secondary px-4 py-2 rounded-full"
+              onClick={onCancel}
+            >
+              {t("comment.cancel_reply")}
+            </button>
+          )}
+          <button
+            className="bg-theme text-white px-4 py-2 rounded-full"
+            onClick={submit}
+          >
+            {parentId ? t("comment.reply") : t("comment.submit")}
+          </button>
+        </div>
       </>) : (
         <div className="flex flex-row w-full items-center justify-center space-x-2 py-12">
           <button
@@ -580,21 +614,6 @@ function CommentInput({
     </div>
   );
 }
-
-type Comment = {
-  id: number;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-  user?: {
-    id: number;
-    username: string;
-    avatar: string | null;
-    permission: number | null;
-  } | null;
-  guestName?: string;
-  guestContact?: string;
-};
 
 function Comments({ id }: { id: string }) {
   const config = useContext(ClientConfigContext);
@@ -642,6 +661,7 @@ function Comments({ id }: { id: string }) {
               {comments.map((comment) => (
                 <CommentItem
                   key={comment.id}
+                  feedId={id}
                   comment={comment}
                   onRefresh={loadComments}
                 />
@@ -655,18 +675,31 @@ function Comments({ id }: { id: string }) {
 }
 
 function CommentItem({
+  feedId,
   comment,
   onRefresh,
+  nested = false,
 }: {
+  feedId: string;
   comment: Comment;
   onRefresh: () => void;
+  nested?: boolean;
 }) {
   const { showConfirm, ConfirmUI } = useConfirm();
   const { showAlert, AlertUI } = useAlert();
   const { t } = useTranslation();
   const profile = useContext(ProfileContext);
+  const [isReplying, setIsReplying] = useState(false);
+  const [likes, setLikes] = useState(comment.likes ?? 0);
+  const [liked, setLiked] = useState(comment.liked ?? false);
   const commenterName = comment.user?.username || comment.guestName || t("anonymous");
   const commenterAvatar = comment.user?.avatar || "/avatar.png";
+
+  useEffect(() => {
+    setLikes(comment.likes ?? 0);
+    setLiked(comment.liked ?? false);
+  }, [comment.id, comment.likes, comment.liked]);
+
   function deleteComment() {
     showConfirm(
       t("delete.comment.title"),
@@ -685,11 +718,25 @@ function CommentItem({
           });
       })
   }
+
+  async function toggleLike() {
+    const { data, error } = await client.comment.toggleLike(comment.id);
+    if (error) {
+      showAlert(error.value as string);
+      return;
+    }
+
+    if (data) {
+      setLiked(data.liked);
+      setLikes((value) => Math.max(0, value + (data.liked ? 1 : -1)));
+    }
+  }
+
   return (
-    <div className="flex flex-row items-start rounded-xl mt-2">
+    <div className={`flex flex-row items-start rounded-xl mt-2 ${nested ? "ml-8" : ""}`}>
       <img
         src={commenterAvatar}
-        className="w-8 h-8 rounded-full mt-4"
+        className={`${nested ? "w-7 h-7" : "w-8 h-8"} rounded-full mt-4`}
       />
       <div className="flex flex-col flex-1 w-0 ml-2 bg-w rounded-xl p-4">
         <div className="flex flex-row">
@@ -705,7 +752,28 @@ function CommentItem({
           </span>
         </div>
         <p className="t-primary break-words">{comment.content}</p>
-        <div className="flex flex-row justify-end">
+        <div className="flex flex-row items-center justify-end gap-2">
+          {profile ? (
+            <button
+              onClick={toggleLike}
+              className={`flex items-center gap-1 px-2 py bg-secondary rounded-full text-sm transition-colors ${liked ? "text-theme" : "t-secondary hover:text-theme"}`}
+              aria-label={t("comment.like")}
+            >
+              <i className={liked ? "ri-heart-fill" : "ri-heart-line"} />
+              {likes > 0 && <span>{likes}</span>}
+            </button>
+          ) : likes > 0 ? (
+            <span className="flex items-center gap-1 px-2 py text-sm t-secondary">
+              <i className="ri-heart-line" />
+              <span>{likes}</span>
+            </span>
+          ) : null}
+          <button
+            onClick={() => setIsReplying(true)}
+            className="px-2 py bg-secondary rounded-full text-sm t-secondary hover:text-theme"
+          >
+            {t("comment.reply")}
+          </button>
           {(profile?.permission || (comment.user && profile?.id == comment.user.id)) && (
             <Popup
               arrow={false}
@@ -728,6 +796,30 @@ function CommentItem({
             </Popup>
           )}
         </div>
+        {isReplying && (
+          <div className="mt-3">
+            <CommentInput
+              id={feedId}
+              parentId={comment.id}
+              replyToName={commenterName}
+              onRefresh={onRefresh}
+              onCancel={() => setIsReplying(false)}
+            />
+          </div>
+        )}
+        {!nested && comment.replies && comment.replies.length > 0 && (
+          <div className="mt-2">
+            {comment.replies.map((reply) => (
+              <CommentItem
+                key={reply.id}
+                feedId={feedId}
+                comment={reply}
+                onRefresh={onRefresh}
+                nested
+              />
+            ))}
+          </div>
+        )}
       </div>
       <ConfirmUI />
       <AlertUI />

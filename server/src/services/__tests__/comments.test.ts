@@ -172,6 +172,63 @@ describe('CommentService', () => {
             expect(guestComment.content).toBe('Hi from guest');
         });
 
+        it('should create a reply under a top-level comment', async () => {
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Reply to comment', parentId: 1 }),
+            }, env);
+
+            expect(res.status).toBe(200);
+
+            const listRes = await app.request('/1', { method: 'GET' }, env);
+            const data = await listRes.json() as any[];
+            const parent = data.find((comment) => comment.id === 1);
+
+            expect(parent).toBeDefined();
+            expect(parent.replies).toHaveLength(1);
+            expect(parent.replies[0].content).toBe('Reply to comment');
+            expect(parent.replies[0].parentId).toBe(1);
+        });
+
+        it('should flatten replies to replies under the top-level parent', async () => {
+            sqlite.exec(`
+                INSERT INTO comments (id, feed_id, parent_id, user_id, content, created_at)
+                VALUES (10, 1, 1, 2, 'First reply', unixepoch())
+            `);
+
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Reply to reply', parentId: 10 }),
+            }, env);
+
+            expect(res.status).toBe(200);
+
+            const row = sqlite.prepare(`SELECT parent_id FROM comments WHERE content = 'Reply to reply'`).get() as any;
+            expect(row.parent_id).toBe(1);
+        });
+
+        it('should reject replies to comments from another feed', async () => {
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Cross-feed reply', parentId: 3 }),
+            }, env);
+
+            expect(res.status).toBe(400);
+            expect(await res.text()).toContain('Parent comment not found');
+        });
+
         it('should return 400 when not authenticated and guest name missing', async () => {
             const res = await app.request('/1', {
                 method: 'POST',
@@ -241,6 +298,61 @@ describe('CommentService', () => {
 
             const comments = sqlite.prepare(`SELECT * FROM comments WHERE feed_id = 1`).all();
             expect(comments.length).toBe(3);
+        });
+    });
+
+    describe('POST /:id/like - Toggle comment like', () => {
+        it('should allow authenticated users to like and unlike a comment', async () => {
+            const likeRes = await app.request('/1/like', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer mock_token_1' },
+            }, env);
+
+            expect(likeRes.status).toBe(200);
+            expect(await likeRes.json() as any).toEqual({ liked: true });
+
+            const unlikeRes = await app.request('/1/like', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer mock_token_1' },
+            }, env);
+
+            expect(unlikeRes.status).toBe(200);
+            expect(await unlikeRes.json() as any).toEqual({ liked: false });
+        });
+
+        it('should require authentication to like a comment', async () => {
+            const res = await app.request('/1/like', { method: 'POST' }, env);
+
+            expect(res.status).toBe(401);
+        });
+
+        it('should return like counts and current user liked state in the list', async () => {
+            sqlite.exec(`
+                INSERT INTO comment_likes (comment_id, user_id) VALUES
+                    (1, 1),
+                    (1, 2)
+            `);
+
+            const res = await app.request('/1', {
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer mock_token_1' },
+            }, env);
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as any[];
+            const comment = data.find((item) => item.id === 1);
+
+            expect(comment.likes).toBe(2);
+            expect(comment.liked).toBe(true);
+        });
+
+        it('should return 404 for liking a missing comment', async () => {
+            const res = await app.request('/999/like', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer mock_token_1' },
+            }, env);
+
+            expect(res.status).toBe(404);
         });
     });
 

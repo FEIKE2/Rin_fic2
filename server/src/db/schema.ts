@@ -95,6 +95,7 @@ export const feedBookmarks = sqliteTable("feed_bookmarks", {
 export const comments = sqliteTable("comments", {
     id: integer("id").primaryKey(),
     feedId: integer("feed_id").references(() => feeds.id, { onDelete: 'cascade' }).notNull(),
+    parentId: integer("parent_id").references((): any => comments.id, { onDelete: 'cascade' }),
     userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
     content: text("content").notNull(),
     guestName: text("guest_name").default(""),
@@ -103,6 +104,15 @@ export const comments = sqliteTable("comments", {
     createdAt: created_at,
     updatedAt: updated_at,
 });
+
+export const commentLikes = sqliteTable("comment_likes", {
+    id: integer("id").primaryKey(),
+    commentId: integer("comment_id").references(() => comments.id, { onDelete: 'cascade' }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    createdAt: created_at,
+}, (table) => ({
+    uniq: unique().on(table.commentId, table.userId),
+}));
 
 export const feedEditHistory = sqliteTable("feed_edit_history", {
     id: integer("id").primaryKey(),
@@ -158,15 +168,24 @@ export const momentsRelations = relations(moments, ({ one }) => ({
     })
 }));
 
-export const commentsRelations = relations(comments, ({ one }) => ({
+export const commentsRelations = relations(comments, ({ one, many }) => ({
     feed: one(feeds, {
         fields: [comments.feedId],
         references: [feeds.id],
+    }),
+    parent: one(comments, {
+        fields: [comments.parentId],
+        references: [comments.id],
+        relationName: "comment_replies",
+    }),
+    replies: many(comments, {
+        relationName: "comment_replies",
     }),
     user: one(users, {
         fields: [comments.userId],
         references: [users.id],
     }),
+    likes: many(commentLikes),
 }));
 
 export const hashtagsRelations = relations(hashtags, ({ many }) => ({
@@ -203,4 +222,9 @@ export const feedLikesRelations = relations(feedLikes, ({ one }) => ({
 export const feedBookmarksRelations = relations(feedBookmarks, ({ one }) => ({
     feed: one(feeds, { fields: [feedBookmarks.feedId], references: [feeds.id] }),
     user: one(users, { fields: [feedBookmarks.userId], references: [users.id] }),
+}));
+
+export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
+    comment: one(comments, { fields: [commentLikes.commentId], references: [comments.id] }),
+    user: one(users, { fields: [commentLikes.userId], references: [users.id] }),
 }));

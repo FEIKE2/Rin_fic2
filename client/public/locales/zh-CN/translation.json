@@ -100,6 +100,10 @@
     "submit": "发表评论",
     "success": "评论成功",
     "title": "评论",
+    "reply": "回复",
+    "replying_to$name": "回复 {{name}}",
+    "cancel_reply": "取消回复",
+    "like": "点赞",
     "guest_name_required": "昵称不能为空",
     "guest_name_placeholder": "昵称（必填）",
     "guest_contact_placeholder": "联系方式（可选）"

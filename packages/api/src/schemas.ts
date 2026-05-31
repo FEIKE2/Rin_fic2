@@ -62,6 +62,7 @@ export const updateProfileSchema = t.Object({
 
 export const commentCreateSchema = t.Object({
   content: t.String(),
+  parentId: t.Numeric({ optional: true }),
   guestName: t.String({ optional: true }),
   guestContact: t.String({ optional: true }),
 });

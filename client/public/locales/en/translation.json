@@ -100,6 +100,10 @@
     "submit": "Submit Comment",
     "success": "Comment successful",
     "title": "Comment",
+    "reply": "Reply",
+    "replying_to$name": "Reply to {{name}}",
+    "cancel_reply": "Cancel reply",
+    "like": "Like",
     "guest_name_required": "Guest name is required",
     "guest_name_placeholder": "Name (required)",
     "guest_contact_placeholder": "Contact (optional)"

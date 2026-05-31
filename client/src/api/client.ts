@@ -362,6 +362,11 @@ class CommentAPI {
   async delete(id: number): Promise<ApiResponse<void>> {
     return this.http.delete<void>(`/api/comment/${id}`);
   }
+
+  // POST /api/comment/:id/like
+  async toggleLike(id: number): Promise<ApiResponse<{ liked: boolean }>> {
+    return this.http.post<{ liked: boolean }>(`/api/comment/${id}/like`);
+  }
 }
 
 /**
