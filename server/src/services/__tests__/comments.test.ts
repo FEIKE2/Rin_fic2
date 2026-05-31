@@ -129,8 +129,7 @@ describe('CommentService', () => {
                 body: JSON.stringify({
                     content: 'Guest comment',
                     guestName: 'Visitor',
-                    guestEmail: 'visitor@example.com',
-                    guestWebsite: 'https://example.com',
+                    guestContact: 'visitor@example.com',
                 }),
             }, env);
 
@@ -138,13 +137,12 @@ describe('CommentService', () => {
 
             // Verify via direct DB query
             const row = sqlite.prepare(
-                `SELECT content, guest_name, guest_email, guest_website FROM comments WHERE guest_name = 'Visitor'`
+                `SELECT content, guest_name, guest_contact FROM comments WHERE guest_name = 'Visitor'`
             ).get() as any;
             expect(row).toBeDefined();
             expect(row.content).toBe('Guest comment');
             expect(row.guest_name).toBe('Visitor');
-            expect(row.guest_email).toBe('visitor@example.com');
-            expect(row.guest_website).toBe('https://example.com');
+            expect(row.guest_contact).toBe('visitor@example.com');
         });
 
         it('should reject guest comment without guestName', async () => {

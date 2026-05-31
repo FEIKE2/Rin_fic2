@@ -36,8 +36,7 @@ export function CommentService(): Hono {
                 ...rest,
                 user: null,
                 guestName: rest.guestName || "",
-                guestEmail: rest.guestEmail || "",
-                guestWebsite: rest.guestWebsite || "",
+                guestContact: rest.guestContact || "",
             };
         });
         
@@ -51,7 +50,7 @@ export function CommentService(): Hono {
         const uid = c.get('uid');
         const feedId = parseInt(c.req.param('feed'));
         const body = await profileAsync(c, 'comment_create_parse', () => c.req.json());
-        const { content, guestName, guestEmail, guestWebsite } = body;
+        const { content, guestName, guestContact } = body;
         
         if (!content) {
             return c.text('Content is required', 400);
@@ -112,8 +111,7 @@ export function CommentService(): Hono {
             userId: null,
             content,
             guestName: guestName.trim(),
-            guestEmail: guestEmail?.trim() || "",
-            guestWebsite: guestWebsite?.trim() || "",
+            guestContact: guestContact?.trim() || "",
             approved: 1,
         });
 

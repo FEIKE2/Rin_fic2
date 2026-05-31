@@ -377,8 +377,7 @@ function CommentInput({
   const { t } = useTranslation();
   const [content, setContent] = useState("");
   const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
-  const [guestWebsite, setGuestWebsite] = useState("");
+  const [guestContact, setGuestContact] = useState("");
   const [error, setError] = useState("");
   const { showAlert, AlertUI } = useAlert();
   const profile = useContext(ProfileContext);
@@ -417,8 +416,7 @@ function CommentInput({
         .create(parseInt(id), {
           content,
           guestName: guestName.trim(),
-          guestEmail: guestEmail.trim() || undefined,
-          guestWebsite: guestWebsite.trim() || undefined,
+          guestContact: guestContact.trim() || undefined,
         })
         .then(({ error }) => {
           if (error) {
@@ -426,8 +424,7 @@ function CommentInput({
           } else {
             setContent("");
             setGuestName("");
-            setGuestEmail("");
-            setGuestWebsite("");
+            setGuestContact("");
             setError("");
             showAlert(t("comment.success"), () => {
               onRefresh();
@@ -466,18 +463,11 @@ function CommentInput({
           onChange={(e) => setGuestName(e.target.value)}
         />
         <input
-          type="email"
-          placeholder={t("comment.guest_email_placeholder")}
+          type="text"
+          placeholder={t("comment.guest_contact_placeholder")}
           className="bg-w w-full rounded-lg px-3 py-2 mb-2 border border-gray-200 dark:border-gray-700"
-          value={guestEmail}
-          onChange={(e) => setGuestEmail(e.target.value)}
-        />
-        <input
-          type="url"
-          placeholder={t("comment.guest_website_placeholder")}
-          className="bg-w w-full rounded-lg px-3 py-2 mb-2 border border-gray-200 dark:border-gray-700"
-          value={guestWebsite}
-          onChange={(e) => setGuestWebsite(e.target.value)}
+          value={guestContact}
+          onChange={(e) => setGuestContact(e.target.value)}
         />
         <textarea
           id="comment"
@@ -520,8 +510,7 @@ type Comment = {
     permission: number | null;
   } | null;
   guestName?: string;
-  guestEmail?: string;
-  guestWebsite?: string;
+  guestContact?: string;
 };
 
 function Comments({ id }: { id: string }) {
@@ -624,16 +613,6 @@ function CommentItem({
           <span className="t-primary text-base font-bold">
             {commenterName}
           </span>
-          {comment.guestWebsite && (
-            <a
-              href={comment.guestWebsite}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-2 text-gray-400 hover:text-theme transition-colors"
-            >
-              <i className="ri-external-link-line"></i>
-            </a>
-          )}
           <div className="flex-1 w-0" />
           <span
             title={new Date(comment.createdAt).toLocaleString()}
