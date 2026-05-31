@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, gt, like, lt, or } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Variables } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
-import { feeds, visits, visitStats } from "../db/schema";
+import { feeds, visits, visitStats, feedEditHistory } from "../db/schema";
 import { HyperLogLog } from "../utils/hyperloglog";
 import { extractImageWithMetadata } from "../utils/image";
 import { syncFeedAISummaryQueueState } from "./feed-ai-summary";
@@ -376,7 +376,7 @@ export function FeedService(): Hono<{
         const uid = c.get('uid');
         const id = c.req.param('id');
         const body = await profileAsync(c, 'feed_update_parse', () => c.req.json());
-        const { title, listed, content, summary, alias, draft, top, tags, createdAt } = body;
+        const { title, listed, content, summary, alias, draft, top, tags, createdAt, editReason } = body;
 
         const id_num = parseInt(id);
         const feed = await profileAsync(c, 'feed_update_lookup', () => db.query.feeds.findFirst({ where: eq(feeds.id, id_num) }));
@@ -390,9 +390,24 @@ export function FeedService(): Hono<{
         }
 
         const contentChanged = content && content !== feed.content;
+        const titleChanged = title && title !== feed.title;
+        const summaryChanged = summary !== undefined && summary !== feed.summary;
         const isDraft = draft !== undefined ? draft : (feed.draft === 1);
         const shouldQueueAISummary = (contentChanged && !isDraft) || (!isDraft && feed.draft === 1 && !feed.ai_summary);
         const updateTime = new Date();
+
+        // 保存编辑历史（如果内容、标题或摘要有变化）
+        if ((contentChanged || titleChanged || summaryChanged) && uid) {
+            await profileAsync(c, 'feed_update_history_save', () => db.insert(feedEditHistory).values({
+                feedId: id_num,
+                userId: uid,
+                title: feed.title,
+                content: feed.content,
+                summary: feed.summary,
+                editReason: editReason || '',
+                createdAt: updateTime
+            }));
+        }
 
         await profileAsync(c, 'feed_update_db', () => db.update(feeds).set({
             title,
@@ -474,6 +489,81 @@ export function FeedService(): Hono<{
         await profileAsync(c, 'feed_delete_cache_invalidate', () => clearFeedCache(cache, id_num, feed.alias, null));
         return c.text('Deleted');
     });
+
+    // GET /feed/:id/history - Get edit history
+    app.get('/:id/history', async (c) => {
+        const db = c.get('db');
+        const admin = c.get('admin');
+        const uid = c.get('uid');
+        const id = c.req.param('id');
+
+        const id_num = parseInt(id);
+        const feed = await profileAsync(c, 'feed_history_lookup', () => db.query.feeds.findFirst({ where: eq(feeds.id, id_num) }));
+
+        if (!feed) {
+            return c.text('Not found', 404);
+        }
+
+        // 只有作者或管理员可以查看编辑历史
+        if (feed.uid !== uid && !admin) {
+            return c.text('Permission denied', 403);
+        }
+
+        const history = await profileAsync(c, 'feed_history_list', () => db.query.feedEditHistory.findMany({
+            where: eq(feedEditHistory.feedId, id_num),
+            with: {
+                user: {
+                    columns: { id: true, username: true, avatar: true }
+                }
+            },
+            orderBy: [desc(feedEditHistory.createdAt)]
+        }));
+
+        return c.json({ data: history });
+    });
+
+    // GET /feed/:id/history/:historyId - Get specific history version
+    app.get('/:id/history/:historyId', async (c) => {
+        const db = c.get('db');
+        const admin = c.get('admin');
+        const uid = c.get('uid');
+        const id = c.req.param('id');
+        const historyId = c.req.param('historyId');
+
+        const id_num = parseInt(id);
+        const history_id_num = parseInt(historyId);
+
+        const feed = await profileAsync(c, 'feed_history_detail_feed_lookup', () => db.query.feeds.findFirst({ where: eq(feeds.id, id_num) }));
+
+        if (!feed) {
+            return c.text('Not found', 404);
+        }
+
+        // 只有作者或管理员可以查看编辑历史
+        if (feed.uid !== uid && !admin) {
+            return c.text('Permission denied', 403);
+        }
+
+        const history = await profileAsync(c, 'feed_history_detail_lookup', () => db.query.feedEditHistory.findFirst({
+            where: eq(feedEditHistory.id, history_id_num),
+            with: {
+                user: {
+                    columns: { id: true, username: true, avatar: true }
+                }
+            }
+        }));
+
+        if (!history) {
+            return c.text('History not found', 404);
+        }
+
+        if (history.feedId !== id_num) {
+            return c.text('History does not belong to this feed', 400);
+        }
+
+        return c.json(history);
+    });
+
     return app;
 }
 

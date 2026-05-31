@@ -85,6 +85,17 @@ export const comments = sqliteTable("comments", {
     updatedAt: updated_at,
 });
 
+export const feedEditHistory = sqliteTable("feed_edit_history", {
+    id: integer("id").primaryKey(),
+    feedId: integer("feed_id").references(() => feeds.id, { onDelete: 'cascade' }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    title: text("title"),
+    content: text("content").notNull(),
+    summary: text("summary").default(""),
+    editReason: text("edit_reason").default(""),
+    createdAt: created_at,
+});
+
 export const hashtags = sqliteTable("hashtags", {
     id: integer("id").primaryKey(),
     name: text("name").notNull(),
@@ -118,6 +129,7 @@ export const feedsRelations = relations(feeds, ({ many, one }) => ({
         references: [users.id],
     }),
     comments: many(comments),
+    editHistory: many(feedEditHistory),
 }));
 
 export const momentsRelations = relations(moments, ({ one }) => ({
@@ -150,5 +162,16 @@ export const feedHashtagsRelations = relations(feedHashtags, ({ one }) => ({
     hashtag: one(hashtags, {
         fields: [feedHashtags.hashtagId],
         references: [hashtags.id],
+    }),
+}));
+
+export const feedEditHistoryRelations = relations(feedEditHistory, ({ one }) => ({
+    feed: one(feeds, {
+        fields: [feedEditHistory.feedId],
+        references: [feeds.id],
+    }),
+    user: one(users, {
+        fields: [feedEditHistory.userId],
+        references: [users.id],
     }),
 }));

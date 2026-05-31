@@ -20,6 +20,8 @@ import { Tips } from "../components/tips";
 import mermaid from "mermaid";
 import { AdjacentSection } from "../components/adjacent_feed.tsx";
 import { stripImageUrlMetadata } from "../utils/image-upload";
+import { EditHistoryModal } from "../components/edit-history-modal";
+import type { FeedEditHistory } from "@rin/api";
 
 function extractFirstMarkdownImageUrl(content: string) {
   const match = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/.exec(content);
@@ -46,6 +48,11 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
   const counterEnabled = config.getBoolean('counter.enabled');
   const hasAISummary = Boolean(feed?.ai_summary?.trim());
   const showAISummaryState = feed?.ai_summary_status === "pending" || feed?.ai_summary_status === "processing" || feed?.ai_summary_status === "failed";
+
+  // Edit history state
+  const [showEditHistory, setShowEditHistory] = useState(false);
+  const [editHistory, setEditHistory] = useState<FeedEditHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   function deleteFeed() {
     // Confirm
     showConfirm(
@@ -85,6 +92,27 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
             }
           });
       })
+  }
+
+  function loadEditHistory() {
+    if (!feed) return;
+    setLoadingHistory(true);
+    fetch(`/api/feed/${feed.id}/history`)
+      .then(res => res.json())
+      .then(data => {
+        setEditHistory(data.data || []);
+        setLoadingHistory(false);
+      })
+      .catch(err => {
+        console.error('Failed to load edit history:', err);
+        setEditHistory([]);
+        setLoadingHistory(false);
+      });
+  }
+
+  function openEditHistory() {
+    setShowEditHistory(true);
+    loadEditHistory();
   }
   useEffect(() => {
     if (ref.current == id) return;
@@ -203,7 +231,7 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                           className="text-gray-400 text-[12px]"
                           title={new Date(feed.updatedAt).toLocaleString()}
                         >
-                          {t("feed_card.updated$time", {
+                          {t("feed_card.edited$time", {
                             time: timeago(feed.updatedAt),
                           })}
                         </p>
@@ -228,7 +256,7 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                     </div>
                   </div>
                   <div className="pt-2">
-                    {profile?.permission && (
+                    {(profile?.permission || profile?.id === feed.user.id) && (
                       <div className="flex gap-2">
                         <button
                           aria-label={top > 0 ? t("untop.title") : t("top.title")}
@@ -237,6 +265,15 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                         >
                           <i className="ri-skip-up-line" />
                         </button>
+                        {feed.createdAt !== feed.updatedAt && (
+                          <button
+                            aria-label={t("edit_history.view")}
+                            onClick={openEditHistory}
+                            className="flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition"
+                          >
+                            <i className="ri-history-line dark:text-neutral-400" />
+                          </button>
+                        )}
                         <Link
                           aria-label={t("edit")}
                           href={`/admin/writing/${feed.id}`}
@@ -318,6 +355,15 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
       </div>
       <AlertUI />
       <ConfirmUI />
+      {feed && (
+        <EditHistoryModal
+          isOpen={showEditHistory}
+          onClose={() => setShowEditHistory(false)}
+          feedId={feed.id}
+          history={editHistory}
+          loading={loadingHistory}
+        />
+      )}
     </Waiting>
   );
 }

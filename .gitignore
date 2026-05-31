@@ -38,3 +38,6 @@ dist-ssr
 
 # Bun
 .bun/*
+
+# 暂时先忽略所有.md
+*.md

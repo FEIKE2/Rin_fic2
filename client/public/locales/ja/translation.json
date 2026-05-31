@@ -132,6 +132,18 @@
   "draft": "下書き",
   "draft_bin": "下書き",
   "edit": "編集",
+  "edit_history": {
+    "title": "編集履歴",
+    "view": "編集履歴を表示",
+    "reason": "編集理由",
+    "reason_placeholder": "例：誤字修正、内容追加など",
+    "edited_by": "{{username}} が編集",
+    "first_published": "初回公開",
+    "view_detail": "詳細を表示",
+    "no_history": "編集履歴なし",
+    "compare": "バージョン比較",
+    "loading": "読み込み中..."
+  },
   "error": {
     "api_url": "Pages 環境変数のAPI_URLはWorkerアドレスである必要があります。Pages環境変数のAPI_URLが正しいか確認してください。",
     "api_url_slash": "Pages 環境変数のAPI_URLはWorkerアドレスである必要があります。Pages環境変数のAPI_URLが正しいか、またAPI_URLの末尾にスラッシュ（/）がないか確認してください。",
@@ -143,7 +155,8 @@
   },
   "feed_card": {
     "published$time": "{{time}} に公開",
-    "updated$time": "{{time}} に更新"
+    "updated$time": "{{time}} に更新",
+    "edited$time": "最終編集: {{time}}"
   },
   "footer": {
     "rss": "RSS 購読リンク"

@@ -88,6 +88,7 @@ export interface UpdateFeedRequest {
   createdAt?: string;
   tags?: string[];
   top?: number;
+  editReason?: string;
 }
 
 export interface AdjacentFeed {
@@ -102,6 +103,30 @@ export interface AdjacentFeed {
 export interface AdjacentFeedResponse {
   previousFeed: AdjacentFeed | null;
   nextFeed: AdjacentFeed | null;
+}
+
+// ============================================================================
+// Feed Edit History Types
+// ============================================================================
+
+export interface FeedEditHistory {
+  id: number;
+  feedId: number;
+  userId: number;
+  title: string | null;
+  content: string;
+  summary: string;
+  editReason: string;
+  createdAt: string;
+  user: {
+    id: number;
+    username: string;
+    avatar: string | null;
+  };
+}
+
+export interface FeedEditHistoryListResponse {
+  data: FeedEditHistory[];
 }
 
 // ============================================================================
@@ -312,6 +337,8 @@ export const API_PATHS = {
   FEED_DELETE: (id: number) => `/api/feed/${id}`,
   FEED_ADJACENT: (id: number | string) => `/api/feed/adjacent/${id}`,
   FEED_SET_TOP: (id: number) => `/api/feed/top/${id}`,
+  FEED_EDIT_HISTORY: (id: number) => `/api/feed/${id}/history`,
+  FEED_EDIT_HISTORY_DETAIL: (id: number, historyId: number) => `/api/feed/${id}/history/${historyId}`,
 
   // Auth
   AUTH_STATUS: '/api/auth/status',

@@ -74,6 +74,7 @@ async function update({
   listed,
   draft,
   createdAt,
+  editReason,
   onCompleted,
   showAlert
 }: {
@@ -86,6 +87,7 @@ async function update({
   tags?: string[];
   draft?: boolean;
   createdAt?: Date;
+  editReason?: string;
   onCompleted?: () => void;
   showAlert: ShowAlertType;
 }) {
@@ -101,6 +103,7 @@ async function update({
       listed,
       draft,
       createdAt: createdAt?.toISOString(),
+      editReason,
     }
   );
   if (onCompleted) {
@@ -129,6 +132,7 @@ export function WritingPage({ id }: { id?: number }) {
   const [listed, setListed] = useState(true);
   const [content, setContent] = cache.useCache("content", "");
   const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date());
+  const [editReason, setEditReason] = useState("");
   const [publishing, setPublishing] = useState(false)
   const { showAlert, AlertUI } = useAlert()
   function publishButton() {
@@ -150,6 +154,7 @@ export function WritingPage({ id }: { id?: number }) {
         draft,
         listed,
         createdAt,
+        editReason,
         onCompleted: () => {
           setPublishing(false)
         },
@@ -285,6 +290,16 @@ export function WritingPage({ id }: { id?: number }) {
               variant="flat"
               className="lg:col-span-2"
             />
+            {id !== undefined && (
+              <Input
+                id={id}
+                value={editReason}
+                setValue={setEditReason}
+                placeholder={t("edit_history.reason_placeholder")}
+                variant="flat"
+                className="lg:col-span-2"
+              />
+            )}
           </div>
 
           <div className="mt-5 grid gap-2 sm:gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(18rem,2fr)]">

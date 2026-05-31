@@ -102,8 +102,7 @@
     "title": "留言",
     "guest_name_required": "暱稱不能為空",
     "guest_name_placeholder": "暱稱（必填）",
-    "guest_email_placeholder": "郵箱（可選）",
-    "guest_website_placeholder": "網站（可選）"
+    "guest_contact_placeholder": "聯絡方式（可選）"
   },
   "comparison": "比較",
   "confirm": "確認",
@@ -133,6 +132,18 @@
   "draft": "草稿",
   "draft_bin": "草稿箱",
   "edit": "編輯",
+  "edit_history": {
+    "title": "編輯歷史",
+    "view": "查看編輯歷史",
+    "reason": "編輯原因",
+    "reason_placeholder": "例如：修正錯別字、補充內容等",
+    "edited_by": "由 {{username}} 編輯",
+    "first_published": "首次發布",
+    "view_detail": "查看詳情",
+    "no_history": "暫無編輯歷史",
+    "compare": "對比版本",
+    "loading": "載入中..."
+  },
   "error": {
     "api_url": "Pages 環境變數中 API_URL 應為 Worker 地址，請檢查 Pages 環境變數中 API_URL 是否正確",
     "api_url_slash": "Pages 環境變數中 API_URL 應為 Worker 地址，請檢查 Pages 環境變數中 API_URL 是否正確，且 API_URL 末尾不能有 /",
@@ -144,7 +155,8 @@
   },
   "feed_card": {
     "published$time": "{{time}} 發布",
-    "updated$time": "{{time}} 更新"
+    "updated$time": "{{time}} 更新",
+    "edited$time": "最後編輯於 {{time}}"
   },
   "footer": {
     "rss": "RSS 訂閱連結"

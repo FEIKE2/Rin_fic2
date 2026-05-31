@@ -132,6 +132,18 @@
   "draft": "Draft",
   "draft_bin": "Draft Bin",
   "edit": "Edit",
+  "edit_history": {
+    "title": "Edit History",
+    "view": "View Edit History",
+    "reason": "Edit Reason",
+    "reason_placeholder": "e.g., Fixed typos, Added content, etc.",
+    "edited_by": "Edited by {{username}}",
+    "first_published": "First Published",
+    "view_detail": "View Details",
+    "no_history": "No edit history",
+    "compare": "Compare Versions",
+    "loading": "Loading..."
+  },
   "error": {
     "api_url": "API_URL in Pages environment variables should be the Worker address. Please check if API_URL in Pages environment variables is correct.",
     "api_url_slash": "API_URL in Pages environment variables should be the Worker address. Please check if API_URL in Pages environment variables is correct and ensure API_URL does not end with a slash (/).",
@@ -143,7 +155,8 @@
   },
   "feed_card": {
     "published$time": "Published at {{time}}",
-    "updated$time": "Updated at {{time}}"
+    "updated$time": "Updated at {{time}}",
+    "edited$time": "Last edited {{time}}"
   },
   "footer": {
     "rss": "RSS Subscription Link"
