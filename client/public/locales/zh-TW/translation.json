@@ -122,7 +122,10 @@
     "image_limit_hint": "最多 1 張圖",
     "too_many_images": "圖片數量超出限制",
     "uploading": "上傳中…",
-    "continue": "繼續"
+    "continue": "繼續",
+    "preview": "預覽",
+    "edit": "編輯",
+    "preview_empty": "暫無內容可預覽"
   },
   "emoji": {
     "group": {
@@ -215,6 +218,10 @@
     "empty": {
       "title": "目錄為空"
     },
+    "section": {
+      "body": "正文",
+      "comments": "留言區"
+    },
     "title": "目錄"
   },
   "listed": "顯示在帖文列表中",
@@ -230,6 +237,9 @@
     "no_methods": "沒有可用的登入方式",
     "oauth_only": "請登入後繼續",
     "or": "或",
+    "with_github": "透過 Github 帳號登入",
+    "with_password": "透過帳號密碼登入",
+    "back": "返回",
     "password": {
       "placeholder": "請輸入密碼"
     },

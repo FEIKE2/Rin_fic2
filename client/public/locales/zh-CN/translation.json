@@ -122,7 +122,10 @@
     "image_limit_hint": "最多 1 张图",
     "too_many_images": "图片数量超出限制",
     "uploading": "上传中…",
-    "continue": "继续"
+    "continue": "继续",
+    "preview": "预览",
+    "edit": "编辑",
+    "preview_empty": "暂无内容可预览"
   },
   "emoji": {
     "group": {
@@ -215,6 +218,10 @@
     "empty": {
       "title": "目录为空"
     },
+    "section": {
+      "body": "正文",
+      "comments": "评论区"
+    },
     "title": "目录"
   },
   "listed": "显示在帖文列表中",
@@ -230,6 +237,9 @@
     "no_methods": "没有可用的登录方式",
     "oauth_only": "请登录后继续",
     "or": "或",
+    "with_github": "通过 Github 账号登录",
+    "with_password": "通过账号密码登录",
+    "back": "返回",
     "password": {
       "placeholder": "请输入密码"
     },

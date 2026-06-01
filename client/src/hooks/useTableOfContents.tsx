@@ -83,27 +83,38 @@ const useTableOfContents = (selector: string) => {
         if (io.current) io.current.disconnect()
     }
 
+    const scrollToElement = (el: HTMLElement | null) => {
+        if (!el) return
+        const top = el.getBoundingClientRect().top + window.scrollY - getHeaderScrollOffset()
+        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' })
+    }
+
     return {
         TOC: () => (<div className='rounded-2xl bg-w py-4 px-4 t-primary'>
             <h2 className="text-lg font-bold">{t("index.title")}</h2>
             <ul className="max-h-[calc(100vh-10.25rem)] overflow-auto" style={{ scrollbarWidth: "none" }}>
-                {tableOfContents.length === 0 && <li>{t("index.empty.title")}</li>}
+                <li
+                    className="cursor-pointer hover:opacity-50 font-medium"
+                    onClick={() => scrollToElement(document.getElementById('feed-article'))}
+                >
+                    {t("index.section.body")}
+                </li>
                 {tableOfContents.map((item) => (
                     <li
                         key={`toc$${item.index}`}
                         className={`cursor-pointer hover:opacity-50 ${activeIndex === item.index ? "text-theme" : ""}`}
-                        style={{ marginLeft: item.marginLeft }}
-                        onClick={() => {
-                            const top = item.element.getBoundingClientRect().top + window.scrollY - getHeaderScrollOffset()
-                            window.scrollTo({
-                                top: Math.max(top, 0),
-                                behavior: 'smooth'
-                            })
-                        }}
+                        style={{ marginLeft: item.marginLeft + 10 }}
+                        onClick={() => scrollToElement(item.element)}
                     >
                         {item.text}
                     </li>
                 ))}
+                <li
+                    className="cursor-pointer hover:opacity-50 font-medium"
+                    onClick={() => scrollToElement(document.getElementById('feed-comments'))}
+                >
+                    {t("index.section.comments")}
+                </li>
             </ul>
         </div>), cleanup
     }

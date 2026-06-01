@@ -122,7 +122,10 @@
     "image_limit_hint": "画像は1枚まで",
     "too_many_images": "画像が多すぎます",
     "uploading": "アップロード中…",
-    "continue": "続行"
+    "continue": "続行",
+    "preview": "プレビュー",
+    "edit": "編集",
+    "preview_empty": "プレビューする内容がありません"
   },
   "emoji": {
     "group": {
@@ -215,12 +218,19 @@
     "empty": {
       "title": "目次は空です"
     },
+    "section": {
+      "body": "本文",
+      "comments": "コメント"
+    },
     "title": "目次"
   },
   "listed": "投稿一覧に表示",
   "load_more": "もっと読み込む",
   "login": {
     "oauth_only": "続行するにはログインしてください",
+    "with_github": "GitHub アカウントでログイン",
+    "with_password": "ユーザー名とパスワードでログイン",
+    "back": "戻る",
     "password": {
       "placeholder": "パスワードを入力してください"
     },

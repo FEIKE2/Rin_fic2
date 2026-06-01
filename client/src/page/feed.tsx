@@ -238,6 +238,8 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
             <div className="xl:w-64" />
             <main className="wauto">
               <article
+                id="feed-article"
+                style={{ scrollMarginTop: "var(--header-scroll-offset)" }}
                 className="rounded-2xl bg-w m-2 px-6 py-4"
                 aria-label={feed.title ?? "Unnamed"}
               >
@@ -365,7 +367,11 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                 </div>
               </article>
               <AdjacentSection id={id} setError={setError} />
-              {feed && <Comments id={`${feed.id}`} />}
+              {feed && (
+                <div id="feed-comments" style={{ scrollMarginTop: "var(--header-scroll-offset)" }}>
+                  <Comments id={`${feed.id}`} />
+                </div>
+              )}
               <div className="h-16" />
             </main>
             <div className="w-80 hidden lg:block relative">
@@ -510,14 +516,16 @@ function CommentInput({
   // guest comments enabled by default; admin can disable via client config `comment.guest.enabled=false`
   const rawGuest = config.get('comment.guest.enabled');
   const guestEnabled = rawGuest !== false && rawGuest !== 'false';
-  // 图片/emoji 工具栏只在主评论（非回复）显示
-  const showToolbar = !parentId;
+  // 表情工具栏对主评论与回复都显示；插入图片仅主评论显示
+  const showImageTool = !parentId;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [urlValue, setUrlValue] = useState("");
+  const [preview, setPreview] = useState(false);
   const textLength = commentTextLength(content);
+  const canEdit = Boolean(profile) || guestEnabled;
 
   function errorHumanize(error: string) {
     if (error === "Unauthorized") return t("login.required");
@@ -688,70 +696,94 @@ function CommentInput({
           </div>
         )) as any}
       </Popup>
-      <Popup
-        arrow={false}
-        position="top left"
-        closeOnDocumentClick
-        trigger={
-          <button
-            type="button"
-            title={t("comment.insert_image")}
-            disabled={uploading}
-            className="bg-secondary bg-button t-secondary px-3 py-2 rounded-full inline-flex items-center gap-1 disabled:opacity-60"
-          >
-            <i className="ri-image-add-line" />
-            <span className="text-sm">{uploading ? t("comment.uploading") : t("comment.insert_image")}</span>
-          </button>
-        }
-      >
-        {((close: () => void) => (
-          <div className={`${HEADER_POPUP_PANEL_CLASS} min-w-32`}>
+      {showImageTool && (
+        <Popup
+          arrow={false}
+          position="top left"
+          closeOnDocumentClick
+          trigger={
             <button
               type="button"
-              onClick={() => { close(); setUrlModalOpen(true); }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              title={t("comment.insert_image")}
+              disabled={uploading}
+              className="bg-secondary bg-button t-secondary px-3 py-2 rounded-full inline-flex items-center gap-1 disabled:opacity-60"
             >
-              <i className="ri-link" /><span>{t("comment.add_url")}</span>
+              <i className="ri-image-add-line" />
+              <span className="text-sm">{uploading ? t("comment.uploading") : t("comment.insert_image")}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => { close(); fileInputRef.current?.click(); }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              <i className="ri-upload-2-line" /><span>{t("comment.local_upload")}</span>
-            </button>
-          </div>
-        )) as any}
-      </Popup>
+          }
+        >
+          {((close: () => void) => (
+            <div className={`${HEADER_POPUP_PANEL_CLASS} min-w-32`}>
+              <button
+                type="button"
+                onClick={() => { close(); setUrlModalOpen(true); }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                <i className="ri-link" /><span>{t("comment.add_url")}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { close(); fileInputRef.current?.click(); }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                <i className="ri-upload-2-line" /><span>{t("comment.local_upload")}</span>
+              </button>
+            </div>
+          )) as any}
+        </Popup>
+      )}
     </div>
   );
 
   const renderCountRow = () => (
     <div className="mt-1 w-full flex items-center justify-between text-xs text-gray-400">
-      <span>{showToolbar ? t("comment.image_limit_hint") : ""}</span>
+      <span>{showImageTool ? t("comment.image_limit_hint") : ""}</span>
       <span>{textLength}/{COMMENT_TEXT_LIMIT}</span>
     </div>
   );
 
+  const renderEditor = () => (
+    preview ? (
+      <div className="bg-w w-full min-h-24 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 break-words text-sm">
+        {content.trim()
+          ? <Markdown content={content} />
+          : <p className="t-secondary">{t("comment.preview_empty")}</p>}
+      </div>
+    ) : (
+      <textarea
+        ref={textareaRef}
+        id={parentId ? `comment-reply-${parentId}` : "comment"}
+        placeholder={t("comment.placeholder.title")}
+        className="bg-w w-full h-24 rounded-lg"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+      />
+    )
+  );
+
   return (
     <div className={`w-full t-primary items-end flex flex-col ${parentId ? "" : "rounded-2xl bg-w p-6"}`}>
-      <div className="flex flex-col w-full items-start mb-4">
+      <div className="flex flex-row w-full items-center justify-between mb-4">
         <label htmlFor={parentId ? `comment-reply-${parentId}` : "comment"}>
           {replyToName ? t("comment.replying_to$name", { name: replyToName }) : t("comment.title")}
         </label>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setPreview((p) => !p)}
+            className="inline-flex items-center gap-1 text-sm t-secondary hover:text-theme transition-colors"
+          >
+            <i className={preview ? "ri-edit-line" : "ri-eye-line"} />
+            <span>{preview ? t("comment.edit") : t("comment.preview")}</span>
+          </button>
+        )}
       </div>
       {profile ? (<>
-        <textarea
-          ref={textareaRef}
-          id={parentId ? `comment-reply-${parentId}` : "comment"}
-          placeholder={t("comment.placeholder.title")}
-          className="bg-w w-full h-24 rounded-lg"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
+        {renderEditor()}
         {renderCountRow()}
         <div className="mt-4 flex w-full items-center gap-2">
-          {showToolbar && renderToolbar()}
+          {renderToolbar()}
           <div className="flex-1" />
           {onCancel && (
             <button
@@ -783,17 +815,10 @@ function CommentInput({
           value={guestContact}
           onChange={(e) => setGuestContact(e.target.value)}
         />
-        <textarea
-          ref={textareaRef}
-          id={parentId ? `comment-reply-${parentId}` : "comment"}
-          placeholder={t("comment.placeholder.title")}
-          className="bg-w w-full h-24 rounded-lg"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
+        {renderEditor()}
         {renderCountRow()}
         <div className="mt-4 flex w-full items-center gap-2">
-          {showToolbar && renderToolbar()}
+          {renderToolbar()}
           <div className="flex-1" />
           {onCancel && (
             <button

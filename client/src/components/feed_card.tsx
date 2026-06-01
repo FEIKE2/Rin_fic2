@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { timeago } from "../utils/timeago";
 import { HashTag } from "./hashtag";
@@ -144,7 +145,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
 
 function LoginTipModal({ onClose }: { onClose: () => void }) {
     const { t } = useTranslation();
-    return (
+    return createPortal(
         <div
             className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
             onClick={onClose}
@@ -159,6 +160,7 @@ function LoginTipModal({ onClose }: { onClose: () => void }) {
                     {t("login.title")}
                 </Link>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

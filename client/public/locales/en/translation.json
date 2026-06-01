@@ -122,7 +122,10 @@
     "image_limit_hint": "1 image max",
     "too_many_images": "Too many images",
     "uploading": "Uploading…",
-    "continue": "Continue"
+    "continue": "Continue",
+    "preview": "Preview",
+    "edit": "Edit",
+    "preview_empty": "Nothing to preview yet"
   },
   "emoji": {
     "group": {
@@ -215,6 +218,10 @@
     "empty": {
       "title": "Index is empty"
     },
+    "section": {
+      "body": "Body",
+      "comments": "Comments"
+    },
     "title": "Index"
   },
   "listed": "Show in post list",
@@ -230,6 +237,9 @@
     "no_methods": "No login methods available",
     "oauth_only": "Please log in to continue",
     "or": "or",
+    "with_github": "Sign in with GitHub",
+    "with_password": "Sign in with username & password",
+    "back": "Back",
     "password": {
       "placeholder": "Please enter your password"
     },
