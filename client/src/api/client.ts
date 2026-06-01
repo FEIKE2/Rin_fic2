@@ -51,6 +51,10 @@ export interface ConfigHealthCell {
   raw?: string;
   href?: string;
   tone?: "normal" | "amber" | "red";
+  action?: {
+    type: "delete-upload";
+    uploadId: number;
+  };
 }
 
 export interface ConfigHealthTable {
@@ -602,6 +606,11 @@ class StorageAPI {
     if (options?.content !== undefined) formData.append("content", options.content);
     
     return this.http.post<UploadResponse>("/api/storage", formData);
+  }
+
+  // DELETE /api/storage/:id
+  async deleteUpload(id: number): Promise<ApiResponse<void>> {
+    return this.http.delete<void>(`/api/storage/${id}`);
   }
 }
 

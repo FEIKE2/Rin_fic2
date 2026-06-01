@@ -1,10 +1,11 @@
 import { SettingsBadge, SettingsCard, SettingsCardBody, SettingsCardHeader } from "@rin/ui";
 import type { ConfigHealthCell, ConfigHealthItem } from "../api/client";
 import { client } from "../app/runtime";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
 import ReactLoading from "react-loading";
+import { useAlert, useConfirm } from "../components/dialog";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 
 function renderHealthText(
@@ -20,7 +21,13 @@ function cellToneClass(tone?: ConfigHealthCell["tone"]) {
   return "";
 }
 
-function HealthTable({ table }: { table: NonNullable<ConfigHealthItem["table"]> }) {
+function HealthTable({
+  table,
+  onDeleteUpload,
+}: {
+  table: NonNullable<ConfigHealthItem["table"]>;
+  onDeleteUpload: (id: number) => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="overflow-x-auto">
@@ -41,7 +48,15 @@ function HealthTable({ table }: { table: NonNullable<ConfigHealthItem["table"]> 
                 const content = cell.text ? renderHealthText(t, cell.text) : cell.raw ?? "";
                 return (
                   <td key={`cell-${ri}-${ci}`} className={`px-2 py-1.5 align-top ${cellToneClass(cell.tone)}`}>
-                    {cell.href ? (
+                    {cell.action?.type === "delete-upload" ? (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteUpload(cell.action!.uploadId)}
+                        className="rounded-full px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30"
+                      >
+                        {content}
+                      </button>
+                    ) : cell.href ? (
                       <a
                         href={cell.href}
                         target="_blank"
@@ -64,7 +79,7 @@ function HealthTable({ table }: { table: NonNullable<ConfigHealthItem["table"]> 
   );
 }
 
-function HealthCard({ item }: { item: ConfigHealthItem }) {
+function HealthCard({ item, onDeleteUpload }: { item: ConfigHealthItem; onDeleteUpload: (id: number) => void }) {
   const { t } = useTranslation();
   const tone = item.status;
   const badgeTone = item.status === "success" ? "success" : item.status === "warning" ? "warning" : "neutral";
@@ -93,7 +108,7 @@ function HealthCard({ item }: { item: ConfigHealthItem }) {
               ))}
             </ul>
           ) : null}
-          {item.table?.rows.length ? <HealthTable table={item.table} /> : null}
+          {item.table?.rows.length ? <HealthTable table={item.table} onDeleteUpload={onDeleteUpload} /> : null}
         </div>
       </SettingsCardBody>
     </SettingsCard>
@@ -108,8 +123,12 @@ export function HealthPage() {
   const [items, setItems] = useState<ConfigHealthItem[]>([]);
   const [summary, setSummary] = useState<Record<"success" | "warning" | "danger", number>>({ success: 0, warning: 0, danger: 0 });
   const [generatedAt, setGeneratedAt] = useState<string>("");
+  const { showAlert, AlertUI } = useAlert();
+  const { showConfirm, ConfirmUI } = useConfirm();
 
-  useEffect(() => {
+  const loadHealth = useCallback(() => {
+    setLoading(true);
+    setError(null);
     client.config
       .getHealth()
       .then(({ data, error }) => {
@@ -127,6 +146,25 @@ export function HealthPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    loadHealth();
+  }, [loadHealth]);
+
+  const deleteUpload = useCallback((id: number) => {
+    showConfirm(
+      t("delete.title"),
+      t("health.items.image_recycling.delete_confirm"),
+      async () => {
+        const { error } = await client.storage.deleteUpload(id);
+        if (error) {
+          showAlert(t("delete.failed$message", { message: error.value }));
+          return;
+        }
+        showAlert(t("delete.success"), loadHealth);
+      },
+    );
+  }, [loadHealth, showAlert, showConfirm, t]);
 
   const orderedItems = useMemo(() => {
     const score = { danger: 0, warning: 1, success: 2 } as const;
@@ -173,10 +211,12 @@ export function HealthPage() {
       {!loading && !error ? (
         <div className="space-y-4">
           {orderedItems.map((item) => (
-            <HealthCard key={item.id} item={item} />
+            <HealthCard key={item.id} item={item} onDeleteUpload={deleteUpload} />
           ))}
         </div>
       ) : null}
+      <AlertUI />
+      <ConfirmUI />
     </div>
   );
 }

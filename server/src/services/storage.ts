@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import type { AppContext } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
-import { getStorageObject, putStorageObject } from "../utils/storage";
+import { deleteStorageObject, getStorageObject, putStorageObject } from "../utils/storage";
 import { uploads } from "../db/schema";
 import { enforceFileAttachmentLimits, FileAttachmentLimitError } from "./file-attachments";
+import { findDanglingUploads } from "./image-recycling";
 
 function buf2hex(buffer: ArrayBuffer) {
     return [...new Uint8Array(buffer)]
@@ -92,6 +93,39 @@ export function StorageService(): Hono {
             const status = e.message?.includes('is not defined') ? 500 : 400;
             return c.text(e.message, status);
         }
+    });
+
+    app.delete('/:id', async (c: AppContext) => {
+        const admin = c.get('admin');
+        const db = c.get('db');
+        const env = c.get('env');
+        const id = Number.parseInt(c.req.param('id'), 10);
+
+        if (!admin) {
+            return c.text('Permission denied', 403);
+        }
+        if (!Number.isFinite(id)) {
+            return c.text('Invalid upload id', 400);
+        }
+
+        const upload = await profileAsync(c, 'storage_delete_lookup', () =>
+            db.query.uploads.findFirst({ where: eq(uploads.id, id) })
+        );
+        if (!upload) {
+            return c.text('Not found', 404);
+        }
+
+        const dangling = await profileAsync(c, 'storage_delete_dangling_check', () => findDanglingUploads(db));
+        if (!dangling.rows.some((row) => row.id === id)) {
+            return c.text('Upload is still referenced', 409);
+        }
+
+        await profileAsync(c, 'storage_delete_object', () => deleteStorageObject(env, upload.storageKey));
+        await profileAsync(c, 'storage_delete_registry', () =>
+            db.delete(uploads).where(eq(uploads.id, id))
+        );
+
+        return c.text('OK');
     });
 
     return app;

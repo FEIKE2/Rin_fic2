@@ -1118,13 +1118,13 @@ function CommentItem({
     <div
       id={`comment-${comment.id}`}
       style={{ scrollMarginTop: "var(--header-scroll-offset)" }}
-      className={`flex flex-row items-start rounded-xl ${nested ? "ml-8 mt-1.5" : "mt-2"}`}
+      className={`flex flex-row items-start rounded-xl ${nested ? "ml-2 mt-1.5" : "mt-2"}`}
     >
       <UserAvatarLink
         user={comment.user}
         className={`${nested ? "h-7 w-7" : "h-8 w-8"} rounded-full mt-4`}
       />
-      <div className="flex flex-col flex-1 w-0 ml-2 bg-w rounded-xl p-4">
+      <div className={`flex flex-col flex-1 w-0 ml-2 rounded-xl p-4 ${nested ? "border border-black/5 bg-black/[0.035] dark:border-white/10 dark:bg-white/[0.06]" : "bg-w"}`}>
         <div className="flex flex-row">
           <span className="t-primary text-base font-bold">
             {commenterName}

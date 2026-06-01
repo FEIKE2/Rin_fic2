@@ -108,7 +108,7 @@ describe('StorageService', () => {
         `);
     }
 
-    function createAppWithEnv(appEnv: Env, uid?: number) {
+    function createAppWithEnv(appEnv: Env, uid?: number, admin = false) {
         const serviceApp = new Hono<{ Bindings: Env; Variables: Variables }>();
         serviceApp.use(createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
             c.set('db', db);
@@ -121,6 +121,7 @@ describe('StorageService', () => {
             } as JWTUtils);
             c.set('env', appEnv);
             c.set('uid', uid);
+            c.set('admin', admin);
             await next();
         }));
         serviceApp.route('/', StorageService());
@@ -317,6 +318,66 @@ describe('StorageService', () => {
 
             expect(res.status).toBe(500);
             expect(await res.text()).toBe('S3_ACCESS_KEY_ID is not defined');
+        });
+    });
+
+    describe('DELETE /:id - Delete dangling upload', () => {
+        it('should allow admins to delete a dangling upload from storage and registry', async () => {
+            const key = 'images/files/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.pdf';
+            sqlite.exec(`
+                INSERT INTO uploads (id, storage_key, url, kind, original_name, size, mime_type, uid, created_at)
+                VALUES (10, '${key}', 'http://localhost/api/blob/${key}', 'file', 'old.pdf', 12, 'application/pdf', 1, unixepoch() - 90000)
+            `);
+            const deleteCalls: string[] = [];
+            const r2Env = createMockEnv({
+                R2_BUCKET: {
+                    delete: async (storageKey: string) => {
+                        deleteCalls.push(storageKey);
+                    },
+                } as unknown as R2Bucket,
+                S3_ACCESS_HOST: '' as any,
+                S3_ENDPOINT: '' as any,
+                S3_BUCKET: '' as any,
+                S3_ACCESS_KEY_ID: '',
+                S3_SECRET_ACCESS_KEY: '',
+            });
+            const r2App = createAppWithEnv(r2Env, 1, true);
+
+            const res = await r2App.request('/10', { method: 'DELETE' }, r2Env);
+
+            expect(res.status).toBe(200);
+            expect(deleteCalls).toEqual([key]);
+            expect(sqlite.prepare(`SELECT id FROM uploads WHERE id = 10`).get()).toBeNull();
+        });
+
+        it('should refuse deleting uploads that are still referenced', async () => {
+            const key = 'images/files/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.pdf';
+            sqlite.exec(`
+                INSERT INTO uploads (id, storage_key, url, kind, original_name, size, mime_type, uid, created_at)
+                VALUES (11, '${key}', 'http://localhost/api/blob/${key}', 'file', 'used.pdf', 12, 'application/pdf', 1, unixepoch() - 90000);
+                INSERT INTO feeds (id, title, content, uid, draft, listed)
+                VALUES (20, 'Used file', '[used.pdf](http://localhost/api/blob/${key} "rin_file")', 1, 0, 1);
+            `);
+            const deleteCalls: string[] = [];
+            const r2Env = createMockEnv({
+                R2_BUCKET: {
+                    delete: async (storageKey: string) => {
+                        deleteCalls.push(storageKey);
+                    },
+                } as unknown as R2Bucket,
+                S3_ACCESS_HOST: '' as any,
+                S3_ENDPOINT: '' as any,
+                S3_BUCKET: '' as any,
+                S3_ACCESS_KEY_ID: '',
+                S3_SECRET_ACCESS_KEY: '',
+            });
+            const r2App = createAppWithEnv(r2Env, 1, true);
+
+            const res = await r2App.request('/11', { method: 'DELETE' }, r2Env);
+
+            expect(res.status).toBe(409);
+            expect(deleteCalls).toEqual([]);
+            expect(sqlite.prepare(`SELECT id FROM uploads WHERE id = 11`).get()).not.toBeNull();
         });
     });
 

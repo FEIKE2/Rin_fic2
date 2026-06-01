@@ -12,8 +12,12 @@ import {
 } from "../db/schema";
 
 export interface DanglingUpload {
+    id: number;
     storageKey: string;
     url: string;
+    kind: string;
+    originalName: string;
+    size: number;
     username: string | null;
     danglingDays: number;
 }
@@ -29,21 +33,29 @@ export interface DanglingResult {
 const GRACE_HOURS = 24;
 // 健康检查响应里最多内联的行数（超出在 summary/details 注明）
 const MAX_ROWS = 200;
-// 匹配存储 key 的稳定子串：images/<sha1>.<ext>。
-// URL 可能带 host 前缀或 #blurhash 片段、或为 /api/blob/... 回退形态，
-// 该正则只截取 images/ 之后到下一个分隔符之前的部分，三种形态都能命中。
-const STORAGE_KEY_RE = /images\/[A-Za-z0-9._-]+/g;
+// 匹配由上传服务生成的 SHA-1 存储 key。URL 可能带 host、/api/blob/ 前缀、
+// 自定义 S3_FOLDER，或 #blurhash 片段；收集时会同时加入各级路径后缀。
+const STORAGE_KEY_RE = /(?:[A-Za-z0-9._-]+\/)*(?:files\/)?[a-f0-9]{40}(?:\.[A-Za-z0-9._-]+)?/gi;
+
+function collectKeySuffixes(target: Set<string>, value: string) {
+    const parts = value.split("/").filter(Boolean);
+    for (let i = 0; i < parts.length; i++) {
+        target.add(parts.slice(i).join("/"));
+    }
+}
 
 function collectKeys(target: Set<string>, value: unknown) {
     if (typeof value !== "string" || value.length === 0) return;
     const matches = value.match(STORAGE_KEY_RE);
     if (matches) {
-        for (const match of matches) target.add(match);
+        for (const match of matches) {
+            collectKeySuffixes(target, match);
+        }
     }
 }
 
 /**
- * 扫描所有可能引用图片的内容来源，找出登记表中「当前未被任何内容引用」且悬空超过 24h 的图片。
+ * 扫描所有可能引用上传文件的内容来源，找出登记表中「当前未被任何内容引用」且悬空超过 24h 的上传文件。
  * 纯只读，不做任何删除。
  */
 export async function findDanglingUploads(db: DB): Promise<DanglingResult> {
@@ -59,8 +71,12 @@ export async function findDanglingUploads(db: DB): Promise<DanglingResult> {
     ] = await Promise.all([
         db
             .select({
+                id: uploads.id,
                 storageKey: uploads.storageKey,
                 url: uploads.url,
+                kind: uploads.kind,
+                originalName: uploads.originalName,
+                size: uploads.size,
                 createdAt: uploads.createdAt,
                 username: users.username,
             })
@@ -106,8 +122,12 @@ export async function findDanglingUploads(db: DB): Promise<DanglingResult> {
         const danglingHours = (now - createdMs) / 3_600_000;
         if (danglingHours <= GRACE_HOURS) continue;
         candidates.push({
+            id: row.id,
             storageKey: row.storageKey,
             url: row.url,
+            kind: row.kind,
+            originalName: row.originalName,
+            size: Number(row.size || 0),
             username: row.username ?? null,
             danglingDays: Math.floor(danglingHours / 24),
         });

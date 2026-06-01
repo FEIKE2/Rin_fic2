@@ -842,24 +842,32 @@
         }
       },
       "image_recycling": {
-        "title": "Image recycling",
+        "title": "Upload recycling",
         "success": {
-          "impact": "Every uploaded image is still referenced by content; there are no dangling images to clean up.",
-          "summary": "No unreferenced images dangling for more than 24 hours."
+          "impact": "Every uploaded file is still referenced by content; there are no dangling uploads to review.",
+          "summary": "No unreferenced uploaded files dangling for more than 24 hours."
         },
         "warning": {
-          "impact": "The images below were uploaded and registered but are no longer referenced by any post, comment, moment, or site config.",
-          "summary": "{{total}} unreferenced image(s), {{over7}} of which have been dangling for 7+ days.",
-          "suggestion": "This list is informational only and nothing is deleted automatically; verify there is truly no reference before cleaning them up in the bucket yourself."
+          "impact": "The files below were uploaded and registered but are no longer referenced by any post, comment, moment, or site config.",
+          "summary": "{{total}} unreferenced uploaded file(s), {{over7}} of which have been dangling for 7+ days.",
+          "suggestion": "This list is informational only and nothing is deleted automatically; verify there is truly no reference before deleting them manually."
         },
         "columns": {
-          "name": "Image",
+          "name": "File",
+          "type": "Type",
+          "size": "Size",
           "location": "Storage location",
           "user": "Uploaded by",
-          "days": "Dangling days"
+          "days": "Dangling days",
+          "action": "Action"
         },
+        "types": {
+          "image": "Image",
+          "file": "File"
+        },
+        "delete_confirm": "Delete this dangling uploaded file? It will be removed from object storage and the upload registry.",
         "anonymous": "(user deleted)",
-        "truncated": "Many unreferenced images; showing only the 200 longest-dangling ({{total}} total)."
+        "truncated": "Many unreferenced uploaded files; showing only the 200 longest-dangling ({{total}} total)."
       }
     },
     "load_failed": "Health check failed",

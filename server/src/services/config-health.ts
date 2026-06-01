@@ -18,6 +18,10 @@ export interface HealthCell {
   raw?: string;
   href?: string;
   tone?: HealthCellTone;
+  action?: {
+    type: "delete-upload";
+    uploadId: number;
+  };
 }
 
 export interface HealthTable {
@@ -429,7 +433,7 @@ export async function buildHealthCheckResponse(
       createItem({
         id: "image-recycling",
         title: text("health.items.image_recycling.title"),
-        status: dangling.over7 > 0 ? "warning" : "success",
+        status: "warning",
         configured: true,
         impact: text("health.items.image_recycling.warning.impact"),
         summary: text("health.items.image_recycling.warning.summary", {
@@ -441,12 +445,17 @@ export async function buildHealthCheckResponse(
         table: {
           columns: [
             text("health.items.image_recycling.columns.name"),
+            text("health.items.image_recycling.columns.type"),
+            text("health.items.image_recycling.columns.size"),
             text("health.items.image_recycling.columns.location"),
             text("health.items.image_recycling.columns.user"),
             text("health.items.image_recycling.columns.days"),
+            text("health.items.image_recycling.columns.action"),
           ],
           rows: dangling.rows.map((row) => [
-            { raw: row.storageKey.split("/").pop() || row.storageKey, href: row.url },
+            { raw: row.originalName || row.storageKey.split("/").pop() || row.storageKey, href: row.url },
+            { text: text(`health.items.image_recycling.types.${row.kind === "file" ? "file" : "image"}`) },
+            { raw: formatBytes(row.size) },
             { raw: row.storageKey },
             row.username
               ? { raw: row.username }
@@ -454,6 +463,11 @@ export async function buildHealthCheckResponse(
             {
               raw: String(row.danglingDays),
               tone: row.danglingDays >= 30 ? "red" : row.danglingDays >= 7 ? "amber" : "normal",
+            },
+            {
+              text: text("delete.title"),
+              tone: "red",
+              action: { type: "delete-upload", uploadId: row.id },
             },
           ]),
         },
@@ -474,4 +488,16 @@ export async function buildHealthCheckResponse(
     summary,
     items,
   };
+}
+
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit++;
+  }
+  return `${unit === 0 ? size : size.toFixed(size >= 10 ? 0 : 1)} ${units[unit]}`;
 }

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react"
+import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Helmet } from 'react-helmet'
 import { Link, useSearch } from "wouter"
 import { FeedCard } from "../components/feed_card"
@@ -22,6 +22,13 @@ type SortOrder = "latest" | "popular";
 type FeedsData = { size: number, data: any[], hasNext: boolean }
 type FeedType = 'draft' | 'unlisted' | 'normal'
 type FeedsMap = { [key in FeedType]: FeedsData }
+type FeedPagesMap = { [key in FeedType]: number }
+
+const MIN_FEED_BATCH_LIMIT = 10;
+
+function normalizeFeedType(type: string | null): FeedType {
+    return type === 'draft' || type === 'unlisted' ? type : 'normal';
+}
 
 function useLocalPref<T extends string>(key: string, fallback: T, normalize: (v: string) => T): [T, (v: T) => void] {
     const [val, setVal] = useState<T>(() => normalize(localStorage.getItem(key) ?? fallback));
@@ -37,15 +44,22 @@ export function FeedsPage() {
     const siteConfig = useSiteConfig();
     const query = new URLSearchParams(useSearch());
     const profile = useContext(ProfileContext);
-    const [listState, _setListState] = useState<FeedType>(query.get("type") as FeedType || 'normal')
+    const listState = normalizeFeedType(query.get("type"))
     const [status, setStatus] = useState<'loading' | 'idle'>('idle')
+    const [loadingMore, setLoadingMore] = useState(false)
     const [feeds, setFeeds] = useState<FeedsMap>({
         draft: { size: 0, data: [], hasNext: false },
         unlisted: { size: 0, data: [], hasNext: false },
         normal: { size: 0, data: [], hasNext: false }
     })
+    const [pages, setPages] = useState<FeedPagesMap>({
+        draft: 1,
+        unlisted: 1,
+        normal: 1
+    })
     const page = tryInt(1, query.get("page"))
     const limit = tryInt(siteConfig.pageSize, query.get("limit"))
+    const batchLimit = Math.max(MIN_FEED_BATCH_LIMIT, limit)
 
     const [feedLayout, setFeedLayout] = useLocalPref<FeedLayout>(LS_LAYOUT, siteConfig.feedLayout, normalizeFeedLayout);
     const [cardVariant, setCardVariant] = useLocalPref<FeedCardVariant>(LS_CARD, siteConfig.feedCardVariant, normalizeFeedCardVariant);
@@ -53,29 +67,73 @@ export function FeedsPage() {
 
     const feedListClass = feedLayout === "masonry" ? "wauto columns-1 gap-5 ani-show md:columns-2" : "wauto flex flex-col ani-show";
     const ref = useRef("")
+    const sentinelRef = useRef<HTMLDivElement>(null)
+    const loadingRef = useRef(false)
+    const requestSeqRef = useRef(0)
 
-    function fetchFeeds(type: FeedType) {
+    const fetchFeeds = useCallback((type: FeedType, options?: { page?: number; append?: boolean }) => {
+        const nextPage = options?.page ?? 1
+        const append = Boolean(options?.append)
+        if (loadingRef.current && append) return
+        const requestSeq = requestSeqRef.current + 1
+        requestSeqRef.current = requestSeq
+        loadingRef.current = true
+        if (append) {
+            setLoadingMore(true)
+        } else {
+            setStatus('loading')
+        }
+
         client.feed.list({
-            page: page,
-            limit: limit,
+            page: nextPage,
+            limit: batchLimit,
             type: type,
             sort: sortOrder,
         }).then(({ data }) => {
+            if (requestSeqRef.current !== requestSeq) return
             if (data) {
-                setFeeds(prev => ({ ...prev, [type]: data }))
-                setStatus('idle')
+                setFeeds(prev => ({
+                    ...prev,
+                    [type]: append
+                        ? { ...data, data: [...prev[type].data, ...data.data] }
+                        : data
+                }))
+                setPages(prev => ({ ...prev, [type]: nextPage }))
             }
+        }).finally(() => {
+            if (requestSeqRef.current !== requestSeq) return
+            loadingRef.current = false
+            setLoadingMore(false)
+            setStatus('idle')
         })
-    }
+    }, [batchLimit, sortOrder])
+
+    const loadMore = useCallback(() => {
+        if (!feeds[listState]?.hasNext || loadingRef.current) return
+        fetchFeeds(listState, { page: pages[listState] + 1, append: true })
+    }, [feeds, fetchFeeds, listState, pages])
+
     useEffect(() => {
-        const key = `${query.get("page")} ${query.get("type")} ${limit} ${sortOrder}`
+        const key = `${page} ${listState} ${batchLimit} ${sortOrder}`
         if (ref.current == key) return
-        const type = query.get("type") as FeedType || 'normal'
-        if (type !== listState) _setListState(type)
-        setStatus('loading')
-        fetchFeeds(type)
+        fetchFeeds(listState, { page, append: false })
         ref.current = key
-    }, [limit, query.get("page"), query.get("type"), sortOrder])
+    }, [batchLimit, fetchFeeds, listState, page, sortOrder])
+
+    useEffect(() => {
+        if (status !== 'idle' || loadingMore || !feeds[listState]?.hasNext) return
+        const sentinel = sentinelRef.current
+        if (!sentinel) return
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                loadMore()
+            }
+        }, { rootMargin: "320px" })
+
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [feeds, listState, loadMore, loadingMore, status])
 
     const sortedData = feeds[listState].data;
 
@@ -128,20 +186,20 @@ export function FeedsPage() {
                                 <FeedCard key={id} id={id} {...feed} user={feed.user} variant={cardVariant} />
                             ))}
                         </div>
-                        <div className="wauto flex flex-row items-center mt-4 ani-show">
-                            {page > 1 &&
-                                <Link href={`/?type=${listState}&page=${(page - 1)}`}
-                                    className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}>
-                                    {t('previous')}
-                                </Link>
-                            }
-                            <div className="flex-1" />
-                            {feeds[listState]?.hasNext &&
-                                <Link href={`/?type=${listState}&page=${(page + 1)}`}
-                                    className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}>
-                                    {t('next')}
-                                </Link>
-                            }
+                        <div ref={sentinelRef} className="h-8 w-full" />
+                        <div className="wauto flex items-center justify-center py-4 text-sm t-secondary ani-show">
+                            {loadingMore ? (
+                                <span>{t('loading')}</span>
+                            ) : feeds[listState]?.hasNext ? (
+                                <button
+                                    onClick={loadMore}
+                                    className="rounded-full bg-theme px-4 py-2 text-sm font-normal text-white"
+                                >
+                                    {t('load_more')}
+                                </button>
+                            ) : sortedData.length > 0 ? (
+                                <span>{t('no_more')}</span>
+                            ) : null}
                         </div>
                     </Waiting>
                 </main>

@@ -1,5 +1,5 @@
 import { path_join } from "./path";
-import { buildS3ObjectUrl, createS3Client, putObject as putS3Object } from "./s3";
+import { buildS3ObjectUrl, createS3Client, deleteObject as deleteS3Object, putObject as putS3Object } from "./s3";
 
 type PutStorageOptions = {
   contentDisposition?: string;
@@ -121,6 +121,16 @@ export async function getStorageObject(env: Env, storageKey: string): Promise<Re
   }
 
   return response;
+}
+
+export async function deleteStorageObject(env: Env, storageKey: string) {
+  if (env.R2_BUCKET) {
+    await env.R2_BUCKET.delete(storageKey);
+    return;
+  }
+
+  const client = createS3Client(env);
+  await deleteS3Object(client, env, storageKey);
 }
 
 export async function headStorageObject(env: Env, storageKey: string): Promise<Response | null> {

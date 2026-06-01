@@ -166,6 +166,40 @@ describe("ConfigService", () => {
             expect(item?.table).toBeUndefined();
         });
 
+        it("should report dangling uploaded files in health table", async () => {
+            sqlite.exec(`
+                INSERT INTO uploads (storage_key, url, kind, original_name, size, mime_type, uid, created_at)
+                VALUES (
+                    'files/cccccccccccccccccccccccccccccccccccccccc.pdf',
+                    'http://localhost/api/blob/files/cccccccccccccccccccccccccccccccccccccccc.pdf',
+                    'file',
+                    'unused.pdf',
+                    1536,
+                    'application/pdf',
+                    1,
+                    unixepoch() - 90000
+                )
+            `);
+
+            const res = await app.request("/health", {
+                method: "GET",
+                headers: {
+                    Authorization: "Bearer mock_token_1",
+                },
+            });
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as {
+                items: Array<{ id: string; status: string; table?: { rows: Array<Array<any>> } }>;
+            };
+            const item = data.items.find((i) => i.id === "image-recycling");
+            expect(item?.status).toBe("warning");
+            expect(item?.table?.rows).toHaveLength(1);
+            expect(item?.table?.rows[0][0].raw).toBe("unused.pdf");
+            expect(item?.table?.rows[0][1].text.key).toBe("health.items.image_recycling.types.file");
+            expect(item?.table?.rows[0][6].action).toMatchObject({ type: "delete-upload" });
+        });
+
         it("should mark default password login as danger", async () => {
             env.ADMIN_USERNAME = "admin" as any;
             env.ADMIN_PASSWORD = "admin123" as any;

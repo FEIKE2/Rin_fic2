@@ -35,12 +35,12 @@ export function UserHomePage({ userId }: { userId: number }) {
         });
     }, [userId]);
 
-    if (error) return <div className="wauto m-4 rounded-2xl bg-w p-6 t-primary">{error}</div>;
+    if (error) return <div className="wauto mx-auto m-4 rounded-2xl bg-w p-6 t-primary">{error}</div>;
 
     return (
         <Waiting for={user}>
             {user && (
-                <div className="wauto flex flex-col gap-4 py-4">
+                <div className="wauto mx-auto flex flex-col gap-4 py-4">
                     <div className="rounded-2xl bg-w p-6">
                         <div className="flex items-center gap-4">
                             <UserAvatarLink user={user} className="h-16 w-16 rounded-full" />
