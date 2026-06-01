@@ -110,7 +110,30 @@
     "guest_name_placeholder": "暱稱（必填）",
     "guest_contact_placeholder": "聯絡方式（可選）",
     "too_long": "留言不能超過 150 字",
-    "login_required_prompt": "請先登入再留言"
+    "login_required_prompt": "請先登入再留言",
+    "insert_image": "插入圖片",
+    "emoji": "表情",
+    "add_url": "新增 URL",
+    "local_upload": "本機上傳",
+    "image_url_title": "圖片連結",
+    "image_url_placeholder": "輸入圖片 URL",
+    "image_unreachable": "圖片無法存取，是否仍要插入？",
+    "image_limit": "每則留言最多插入一張圖片",
+    "image_limit_hint": "最多 1 張圖",
+    "too_many_images": "圖片數量超出限制",
+    "uploading": "上傳中…",
+    "continue": "繼續"
+  },
+  "emoji": {
+    "group": {
+      "smileys": "笑臉與情緒",
+      "gestures": "手勢與人物",
+      "hearts": "愛心與符號",
+      "animals": "動物與自然",
+      "food": "食物與飲品",
+      "activities": "活動與物品",
+      "symbols": "符號"
+    }
   },
   "comparison": "比較",
   "confirm": "確認",

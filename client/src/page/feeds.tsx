@@ -109,7 +109,7 @@ export function FeedsPage() {
                                 />
                                 {/* 排序方式 */}
                                 <SortPopup sortOrder={sortOrder} setSortOrder={setSortOrder} />
-                                {profile &&
+                                {profile?.permission &&
                                     <Link href={listState === 'draft' ? '/?type=normal' : '/?type=draft'} className={`text-sm text-neutral-500 font-normal ${listState === 'draft' ? "text-theme" : ""}`}>
                                         {t('draft_bin')}
                                     </Link>

@@ -419,10 +419,14 @@ export function Markdown({ content }: { content: string }) {
   const show = (src: string | undefined) => {
     let slidesLocal = slides.current;
     if (!slidesLocal) {
-      const parent = document.getElementsByClassName("toc-content")[0];
-      if (!parent) return;
-      const images = parent.querySelectorAll("img");
-      slidesLocal = Array.from(images)
+      // 页面上可能存在多个 .toc-content（正文 + 各条评论），汇总所有图片为统一图集
+      const parents = document.getElementsByClassName("toc-content");
+      if (parents.length === 0) return;
+      const images: HTMLImageElement[] = [];
+      Array.from(parents).forEach((parent) => {
+        images.push(...Array.from(parent.querySelectorAll("img")));
+      });
+      slidesLocal = images
         .map((image) => {
           const url = image.getAttribute("src") || "";
           const filename = url.split("/").pop() || "";

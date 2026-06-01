@@ -7,6 +7,7 @@ export type Confirm = {
     title: string;
     message: string;
     onConfirm: () => Promise<void> | void;
+    confirmLabel?: string;
 }
 
 export type Alert = {
@@ -85,11 +86,12 @@ export function useConfirm() {
         setConfirm(null)
         setIsOpen(false)
     }
-    const showConfirm = (title: string, message: string, onConfirm?: () => Promise<void> | void) => {
+    const showConfirm = (title: string, message: string, onConfirm?: () => Promise<void> | void, confirmLabel?: string) => {
         setConfirm({
             title,
             message,
-            onConfirm: onConfirm ?? (() => { })
+            onConfirm: onConfirm ?? (() => { }),
+            confirmLabel
         })
         setIsOpen(true)
     }
@@ -139,7 +141,7 @@ export function useConfirm() {
                             setLoading(false);
                             setIsOpen(false);
                         }}
-                        title={t('confirm')} />
+                        title={confirm?.confirmLabel ?? t('confirm')} />
                     <Button secondary onClick={close} title={t('cancel')} />
                 </div>
             </div>

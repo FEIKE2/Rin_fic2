@@ -110,7 +110,30 @@
     "guest_name_placeholder": "名前（必須）",
     "guest_contact_placeholder": "連絡先（任意）",
     "too_long": "コメントは150文字を超えられません",
-    "login_required_prompt": "コメントするにはログインしてください"
+    "login_required_prompt": "コメントするにはログインしてください",
+    "insert_image": "画像を挿入",
+    "emoji": "絵文字",
+    "add_url": "URL を追加",
+    "local_upload": "アップロード",
+    "image_url_title": "画像 URL",
+    "image_url_placeholder": "画像 URL を入力",
+    "image_unreachable": "画像にアクセスできません。それでも挿入しますか？",
+    "image_limit": "コメントごとに画像は1枚までです",
+    "image_limit_hint": "画像は1枚まで",
+    "too_many_images": "画像が多すぎます",
+    "uploading": "アップロード中…",
+    "continue": "続行"
+  },
+  "emoji": {
+    "group": {
+      "smileys": "顔と感情",
+      "gestures": "ジェスチャーと人物",
+      "hearts": "ハートと記号",
+      "animals": "動物と自然",
+      "food": "食べ物と飲み物",
+      "activities": "アクティビティと物",
+      "symbols": "記号"
+    }
   },
   "comparison": "対比",
   "confirm": "確認",

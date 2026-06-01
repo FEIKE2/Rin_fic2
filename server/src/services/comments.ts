@@ -120,8 +120,18 @@ export function CommentService(): Hono {
             return c.text('Content is required', 400);
         }
 
-        if (typeof content === 'string' && content.length > 150) {
-            return c.text('Comment too long', 400);
+        if (typeof content === 'string') {
+            // 图片 markdown 不计入 150 字上限，但限制每条评论最多 1 张图，且总长有绝对上限
+            const IMAGE_MD = /!\[[^\]]*\]\([^)]*\)/g;
+            if ((content.match(IMAGE_MD) || []).length > 1) {
+                return c.text('Too many images', 400);
+            }
+            if (content.replace(IMAGE_MD, '').length > 150) {
+                return c.text('Comment too long', 400);
+            }
+            if (content.length > 1000) {
+                return c.text('Comment too long', 400);
+            }
         }
         
         const exist = await profileAsync(c, 'comment_create_feed', () => db.query.feeds.findFirst({ where: eq(feeds.id, feedId) }));

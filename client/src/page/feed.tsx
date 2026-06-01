@@ -1,5 +1,5 @@
 import type { Comment, Feed, FeedEditHistory } from "@rin/api";
-import { useContext, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useContext, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
 import ReactModal from "react-modal";
@@ -22,6 +22,33 @@ import { AdjacentSection } from "../components/adjacent_feed.tsx";
 import { stripImageUrlMetadata } from "../utils/image-upload";
 import { EditHistoryModal } from "../components/edit-history-modal";
 import { UserAvatarLink } from "../components/user-hover-card";
+import { HEADER_POPUP_PANEL_CLASS } from "../components/site-header/shared";
+import { buildMarkdownImage, generateImageMetadataFromUrl, uploadImageFile } from "../utils/image-upload";
+import { EMOJI_GROUPS } from "../utils/emoji";
+
+const COMMENT_IMAGE_RE = /!\[[^\]]*\]\([^)]*\)/g;
+const COMMENT_TEXT_LIMIT = 150;
+
+function commentTextLength(content: string) {
+  return content.replace(COMMENT_IMAGE_RE, "").length;
+}
+
+function commentImageCount(content: string) {
+  return (content.match(COMMENT_IMAGE_RE) || []).length;
+}
+
+function checkImageReachable(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+}
+
+function fileNameFromUrl(url: string) {
+  return url.split("/").pop()?.split(/[?#]/)[0] || "image";
+}
 
 function extractFirstMarkdownImageUrl(content: string) {
   const match = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/.exec(content);
@@ -476,26 +503,103 @@ function CommentInput({
   const [guestContact, setGuestContact] = useState("");
   const [error, setError] = useState("");
   const { showAlert, AlertUI } = useAlert();
+  const { showConfirm, ConfirmUI } = useConfirm();
   const profile = useContext(ProfileContext);
   const [, setLocation] = useLocation();
   const config = useContext(ClientConfigContext);
   // guest comments enabled by default; admin can disable via client config `comment.guest.enabled=false`
   const rawGuest = config.get('comment.guest.enabled');
   const guestEnabled = rawGuest !== false && rawGuest !== 'false';
+  // 图片/emoji 工具栏只在主评论（非回复）显示
+  const showToolbar = !parentId;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const textLength = commentTextLength(content);
+
   function errorHumanize(error: string) {
     if (error === "Unauthorized") return t("login.required");
     else if (error === "Content is required") return t("comment.empty");
     else if (error === "Comment too long") return t("comment.too_long");
+    else if (error === "Too many images") return t("comment.too_many_images");
     else if (error === "Guest name is required") return t("comment.guest_name_required");
     else if (error === "Parent comment has been deleted") return t("comment.parent_deleted");
     return error;
   }
+
+  function insertAtCaret(text: string) {
+    const el = textareaRef.current;
+    if (!el) {
+      setContent((c) => c + text);
+      return;
+    }
+    const start = el.selectionStart ?? content.length;
+    const end = el.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + text + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + text.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  function insertImageMarkdown(markdown: string) {
+    if (commentImageCount(content) >= 1) {
+      showAlert(t("comment.image_limit"));
+      return;
+    }
+    insertAtCaret(markdown);
+  }
+
+  async function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (commentImageCount(content) >= 1) {
+      showAlert(t("comment.image_limit"));
+      return;
+    }
+    setUploading(true);
+    try {
+      const { url, blurhash, width, height } = await uploadImageFile(file);
+      insertImageMarkdown(buildMarkdownImage(file.name, url, { blurhash, width, height }));
+    } catch (err) {
+      showAlert((err as Error)?.message || t("comment.too_long"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function submitUrl() {
+    const url = urlValue.trim();
+    if (!url) return;
+    setUrlModalOpen(false);
+    setUrlValue("");
+    if (commentImageCount(content) >= 1) {
+      showAlert(t("comment.image_limit"));
+      return;
+    }
+    const doInsert = async () => {
+      const meta = await generateImageMetadataFromUrl(url).catch(() => ({}));
+      insertImageMarkdown(buildMarkdownImage(fileNameFromUrl(url), url, meta));
+    };
+    const reachable = await checkImageReachable(url);
+    if (reachable) {
+      await doInsert();
+    } else {
+      showConfirm(t("alert"), t("comment.image_unreachable"), doInsert, t("comment.continue"));
+    }
+  }
+
   function submit() {
-    if (content.trim().length === 0) {
+    if (textLength === 0 && commentImageCount(content) === 0) {
       setError(t("comment.empty"));
       return;
     }
-    if (content.length > 150) {
+    if (textLength > COMMENT_TEXT_LIMIT) {
       setError(t("comment.too_long"));
       return;
     }
@@ -548,6 +652,87 @@ function CommentInput({
       setLocation('/login');
     }
   }
+
+  // 渲染为内联函数调用（而非 <Component/>），避免每次输入都重挂载内部 Popup
+  const renderToolbar = () => (
+    <div className="flex items-center gap-2">
+      <Popup
+        arrow={false}
+        position="top left"
+        closeOnDocumentClick
+        trigger={
+          <button type="button" title={t("comment.emoji")} className="bg-secondary bg-button t-secondary px-3 py-2 rounded-full leading-none">😀</button>
+        }
+      >
+        {((close: () => void) => (
+          <div className={`${HEADER_POPUP_PANEL_CLASS} max-h-64 w-72 overflow-y-auto`}>
+            {EMOJI_GROUPS.map((group) => (
+              <div key={group.key} className="mb-1">
+                <p className="px-1 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
+                  {t(`emoji.group.${group.key}`)}
+                </p>
+                <div className="grid grid-cols-8 gap-0.5">
+                  {group.emojis.map((emoji, i) => (
+                    <button
+                      key={`${group.key}-${i}`}
+                      type="button"
+                      onClick={() => { insertAtCaret(emoji); close(); }}
+                      className="rounded text-xl leading-none hover:bg-black/5 dark:hover:bg-white/10 py-1"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )) as any}
+      </Popup>
+      <Popup
+        arrow={false}
+        position="top left"
+        closeOnDocumentClick
+        trigger={
+          <button
+            type="button"
+            title={t("comment.insert_image")}
+            disabled={uploading}
+            className="bg-secondary bg-button t-secondary px-3 py-2 rounded-full inline-flex items-center gap-1 disabled:opacity-60"
+          >
+            <i className="ri-image-add-line" />
+            <span className="text-sm">{uploading ? t("comment.uploading") : t("comment.insert_image")}</span>
+          </button>
+        }
+      >
+        {((close: () => void) => (
+          <div className={`${HEADER_POPUP_PANEL_CLASS} min-w-32`}>
+            <button
+              type="button"
+              onClick={() => { close(); setUrlModalOpen(true); }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <i className="ri-link" /><span>{t("comment.add_url")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { close(); fileInputRef.current?.click(); }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <i className="ri-upload-2-line" /><span>{t("comment.local_upload")}</span>
+            </button>
+          </div>
+        )) as any}
+      </Popup>
+    </div>
+  );
+
+  const renderCountRow = () => (
+    <div className="mt-1 w-full flex items-center justify-between text-xs text-gray-400">
+      <span>{showToolbar ? t("comment.image_limit_hint") : ""}</span>
+      <span>{textLength}/{COMMENT_TEXT_LIMIT}</span>
+    </div>
+  );
+
   return (
     <div className={`w-full t-primary items-end flex flex-col ${parentId ? "" : "rounded-2xl bg-w p-6"}`}>
       <div className="flex flex-col w-full items-start mb-4">
@@ -557,15 +742,17 @@ function CommentInput({
       </div>
       {profile ? (<>
         <textarea
+          ref={textareaRef}
           id={parentId ? `comment-reply-${parentId}` : "comment"}
           placeholder={t("comment.placeholder.title")}
           className="bg-w w-full h-24 rounded-lg"
-          maxLength={150}
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
-        <p className="mt-1 w-full text-right text-xs text-gray-400">{content.length}/150</p>
-        <div className="mt-4 flex gap-2">
+        {renderCountRow()}
+        <div className="mt-4 flex w-full items-center gap-2">
+          {showToolbar && renderToolbar()}
+          <div className="flex-1" />
           {onCancel && (
             <button
               className="bg-secondary bg-button t-secondary px-4 py-2 rounded-full"
@@ -597,15 +784,17 @@ function CommentInput({
           onChange={(e) => setGuestContact(e.target.value)}
         />
         <textarea
+          ref={textareaRef}
           id={parentId ? `comment-reply-${parentId}` : "comment"}
           placeholder={t("comment.placeholder.title")}
           className="bg-w w-full h-24 rounded-lg"
-          maxLength={150}
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
-        <p className="mt-1 w-full text-right text-xs text-gray-400">{content.length}/150</p>
-        <div className="mt-4 flex gap-2">
+        {renderCountRow()}
+        <div className="mt-4 flex w-full items-center gap-2">
+          {showToolbar && renderToolbar()}
+          <div className="flex-1" />
           {onCancel && (
             <button
               className="bg-secondary bg-button t-secondary px-4 py-2 rounded-full"
@@ -633,7 +822,42 @@ function CommentInput({
         </div>
       )}
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+      {urlModalOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setUrlModalOpen(false); setUrlValue(""); }}
+        >
+          <div
+            className="flex w-full max-w-sm flex-col gap-3 rounded-2xl bg-w p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="t-primary text-base font-medium">{t("comment.image_url_title")}</p>
+            <input
+              autoFocus
+              type="text"
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitUrl(); }}
+              placeholder={t("comment.image_url_placeholder")}
+              className="bg-w w-full rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="bg-secondary bg-button t-secondary px-4 py-2 rounded-full"
+                onClick={() => { setUrlModalOpen(false); setUrlValue(""); }}
+              >
+                {t("cancel")}
+              </button>
+              <button className="bg-theme text-white px-4 py-2 rounded-full" onClick={submitUrl}>
+                {t("confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <AlertUI />
+      <ConfirmUI />
     </div>
   );
 }
@@ -786,7 +1010,9 @@ function CommentItem({
         {isDeleted ? (
           <p className="text-sm italic text-neutral-500 dark:text-neutral-400">{t("comment.deleted")}</p>
         ) : (
-          <p className="t-primary break-words">{comment.content}</p>
+          <div className="t-primary break-words text-sm">
+            <Markdown content={comment.content} />
+          </div>
         )}
         <div className="flex flex-row items-center justify-end gap-2">
           {!isDeleted && profile ? (
@@ -821,14 +1047,16 @@ function CommentItem({
                 </button>
               }
               position="bottom right"
+              closeOnDocumentClick
             >
-              <div className="flex flex-row self-end mr-2">
+              <div className={`${HEADER_POPUP_PANEL_CLASS} min-w-28`}>
                 <button
                   onClick={deleteComment}
                   aria-label={t("delete.comment.title")}
-                  className="px-2 py bg-secondary rounded-full"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
                 >
-                  <i className="ri-delete-bin-2-line t-secondary"></i>
+                  <i className="ri-delete-bin-2-line"></i>
+                  <span>{t("delete.comment.title")}</span>
                 </button>
               </div>
             </Popup>
@@ -876,7 +1104,8 @@ function CommentQuote({
   const quote = replyTo.deleted || !replyTo.content ? (
     <span className="italic">{t("comment.deleted")}</span>
   ) : (
-    replyTo.content
+    // 引用预览里把图片 markdown 折叠成图标，避免显示原始链接
+    replyTo.content.replace(/!\[[^\]]*\]\([^)]*\)/g, " 🖼️ ").trim()
   );
 
   const content = (

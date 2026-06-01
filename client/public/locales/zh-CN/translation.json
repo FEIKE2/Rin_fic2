@@ -110,7 +110,30 @@
     "guest_name_placeholder": "昵称（必填）",
     "guest_contact_placeholder": "联系方式（可选）",
     "too_long": "评论不能超过 150 字",
-    "login_required_prompt": "请先登录再评论"
+    "login_required_prompt": "请先登录再评论",
+    "insert_image": "插入图片",
+    "emoji": "表情",
+    "add_url": "添加 URL",
+    "local_upload": "本地上传",
+    "image_url_title": "图片链接",
+    "image_url_placeholder": "输入图片 URL",
+    "image_unreachable": "图片不可达，是否仍要插入？",
+    "image_limit": "每条评论最多插入一张图片",
+    "image_limit_hint": "最多 1 张图",
+    "too_many_images": "图片数量超出限制",
+    "uploading": "上传中…",
+    "continue": "继续"
+  },
+  "emoji": {
+    "group": {
+      "smileys": "笑脸与情绪",
+      "gestures": "手势与人物",
+      "hearts": "爱心与符号",
+      "animals": "动物与自然",
+      "food": "食物与饮品",
+      "activities": "活动与物品",
+      "symbols": "符号"
+    }
   },
   "comparison": "对比",
   "confirm": "确认",

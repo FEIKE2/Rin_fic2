@@ -339,12 +339,14 @@ export function WritingPage({ id }: { id?: number }) {
                 placeholder={t('visible.login_only')}
               />
             </FlatMetaRow>
-            <FlatMetaRow className="gap-3 rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3">
-              <p className="mr-2 whitespace-nowrap">
-                {t('created_at')}
-              </p>
-              <DateTimeInput value={createdAt} onChange={setCreatedAt} className="w-full max-w-[16rem]" />
-            </FlatMetaRow>
+            {isAdmin && (
+              <FlatMetaRow className="gap-3 rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3">
+                <p className="mr-2 whitespace-nowrap">
+                  {t('created_at')}
+                </p>
+                <DateTimeInput value={createdAt} onChange={setCreatedAt} className="w-full max-w-[16rem]" />
+              </FlatMetaRow>
+            )}
           </div>
         </FlatPanel>
     )

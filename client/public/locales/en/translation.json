@@ -110,7 +110,30 @@
     "guest_name_placeholder": "Name (required)",
     "guest_contact_placeholder": "Contact (optional)",
     "too_long": "Comment cannot exceed 150 characters",
-    "login_required_prompt": "Please log in to comment"
+    "login_required_prompt": "Please log in to comment",
+    "insert_image": "Insert image",
+    "emoji": "Emoji",
+    "add_url": "Add URL",
+    "local_upload": "Upload",
+    "image_url_title": "Image URL",
+    "image_url_placeholder": "Enter image URL",
+    "image_unreachable": "Image is unreachable. Insert anyway?",
+    "image_limit": "At most one image per comment",
+    "image_limit_hint": "1 image max",
+    "too_many_images": "Too many images",
+    "uploading": "Uploading…",
+    "continue": "Continue"
+  },
+  "emoji": {
+    "group": {
+      "smileys": "Smileys & Emotion",
+      "gestures": "Gestures & People",
+      "hearts": "Hearts & Symbols",
+      "animals": "Animals & Nature",
+      "food": "Food & Drink",
+      "activities": "Activities & Objects",
+      "symbols": "Symbols"
+    }
   },
   "comparison": "Comparison",
   "confirm": "Confirm",

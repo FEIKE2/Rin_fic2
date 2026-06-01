@@ -58,10 +58,11 @@ export type FeedCardProps = {
     preview?: boolean;
     variant?: FeedCardVariant;
     loginRequired?: number;
+    hotScore?: number;
     user?: { username?: string };
 };
 
-export function FeedCard({ id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, preview = false, variant, loginRequired, user }: FeedCardProps) {
+export function FeedCard({ id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, preview = false, variant, loginRequired, hotScore, user }: FeedCardProps) {
     const { t } = useTranslation();
     const siteConfig = useSiteConfig();
     const profile = useContext(ProfileContext);
@@ -69,6 +70,10 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
     const [showLoginTip, setShowLoginTip] = useState(false);
     // 游客面对"仅登录可见"的帖子：隐藏图片与正文/简介
     const locked = loginRequired === 1 && !profile && !preview;
+    // 管理员可见：当前热度值
+    const hotBadge = profile?.permission && typeof hotScore === "number"
+        ? <span className="text-orange-500"><i className="ri-fire-line" /> {Math.round(hotScore)}</span>
+        : null;
 
     const lockedNote = (
         <p className="mt-2 text-sm italic text-neutral-500 dark:text-neutral-400">{t("visible.login_only")}</p>
@@ -87,6 +92,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
                 {draft === 1 && <span>{t("draft")}</span>}
                 {listed === 0 && <span>{t("unlisted")}</span>}
                 {top === 1 && <span className="text-theme">{t('article.top.title')}</span>}
+                {hotBadge}
             </p>
         </div>
     ) : (
@@ -109,6 +115,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
                 {draft === 1 && <span>{t("draft")}</span>}
                 {listed === 0 && <span>{t("unlisted")}</span>}
                 {top === 1 && <span className="text-theme">{t('article.top.title')}</span>}
+                {hotBadge}
             </p>
             {locked ? lockedNote : (summary ? <p className="line-clamp-4 text-pretty overflow-hidden dark:text-neutral-500">{summary}</p> : null)}
             {hashtags.length > 0 && (
