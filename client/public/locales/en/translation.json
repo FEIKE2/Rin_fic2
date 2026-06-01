@@ -661,7 +661,7 @@
   "url": "Site URL",
   "visible": {
     "self_only": "Visible to self only",
-    "login_only": "Login required",
+    "login_only": "Only signed-in users can view",
     "login_to_view": "Please log in to view"
   },
   "writing": "Writing",

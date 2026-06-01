@@ -1,5 +1,5 @@
 import type { Comment, Feed, FeedEditHistory } from "@rin/api";
-import { type ChangeEvent, useContext, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
 import ReactModal from "react-modal";
@@ -28,6 +28,8 @@ import { EMOJI_GROUPS } from "../utils/emoji";
 
 const COMMENT_IMAGE_RE = /!\[[^\]]*\]\([^)]*\)/g;
 const COMMENT_TEXT_LIMIT = 150;
+const COMMENT_BATCH_LIMIT = 30;
+const COMMENT_WINDOW_LIMIT = 500;
 
 function commentTextLength(content: string) {
   return content.replace(COMMENT_IMAGE_RE, "").length;
@@ -35,6 +37,10 @@ function commentTextLength(content: string) {
 
 function commentImageCount(content: string) {
   return (content.match(COMMENT_IMAGE_RE) || []).length;
+}
+
+function countCommentTree(comments: Comment[]) {
+  return comments.reduce((count, comment) => count + 1 + (comment.replies?.length ?? 0), 0);
 }
 
 function checkImageReachable(url: string): Promise<boolean> {
@@ -898,37 +904,104 @@ function Comments({ id }: { id: string }) {
   const config = useContext(ClientConfigContext);
   const [comments, setComments] = useState<Comment[]>([]);
   const [error, setError] = useState<string>();
-  const ref = useRef("");
+  const [loading, setLoading] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [windowStartCursor, setWindowStartCursor] = useState<string | null>(null);
+  const [previousCursors, setPreviousCursors] = useState<(string | null)[]>([]);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+  const requestSeqRef = useRef(0);
   const { t } = useTranslation();
 
-  function loadComments() {
+  const loadedCount = countCommentTree(comments);
+  const reachedWindowLimit = loadedCount >= COMMENT_WINDOW_LIMIT;
+
+  const loadComments = useCallback((options?: { cursor?: string | null; reset?: boolean }) => {
+    const reset = Boolean(options?.reset);
+    if (loadingRef.current && !reset) return;
+    const requestSeq = requestSeqRef.current + 1;
+    requestSeqRef.current = requestSeq;
+    loadingRef.current = true;
+    setLoading(true);
     client.comment
-      .list(parseInt(id))
+      .list(parseInt(id), { limit: COMMENT_BATCH_LIMIT, cursor: options?.cursor })
       .then(({ data, error }) => {
+        if (requestSeqRef.current !== requestSeq) return;
         if (error) {
           setError(error.value as string);
-        } else if (data && Array.isArray(data)) {
-          setComments(data as any);
+        } else if (data) {
+          setError(undefined);
+          setComments((current) => reset ? data.data : [...current, ...data.data]);
+          setHasNext(data.hasNext);
+          setNextCursor(data.nextCursor);
         }
+      })
+      .finally(() => {
+        if (requestSeqRef.current !== requestSeq) return;
+        loadingRef.current = false;
+        setLoading(false);
       });
-  }
-  useEffect(() => {
-    if (ref.current == id) return;
-    loadComments();
-    ref.current = id;
   }, [id]);
+
+  const reloadComments = useCallback(() => {
+    setWindowStartCursor(null);
+    setPreviousCursors([]);
+    loadComments({ cursor: null, reset: true });
+  }, [loadComments]);
+
+  useEffect(() => {
+    setComments([]);
+    setError(undefined);
+    setHasNext(false);
+    setNextCursor(null);
+    setWindowStartCursor(null);
+    setPreviousCursors([]);
+    loadComments({ cursor: null, reset: true });
+  }, [id, loadComments]);
+
+  useEffect(() => {
+    if (!hasNext || reachedWindowLimit) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        loadComments({ cursor: nextCursor });
+      }
+    }, { rootMargin: "240px" });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNext, loadComments, nextCursor, reachedWindowLimit]);
+
+  function loadNextWindow() {
+    if (!nextCursor || loadingRef.current) return;
+    setPreviousCursors((current) => [...current, windowStartCursor]);
+    setWindowStartCursor(nextCursor);
+    loadComments({ cursor: nextCursor, reset: true });
+  }
+
+  function loadPreviousWindow() {
+    if (loadingRef.current) return;
+    const previousCursor = previousCursors[previousCursors.length - 1];
+    setPreviousCursors((current) => current.slice(0, -1));
+    setWindowStartCursor(previousCursor ?? null);
+    loadComments({ cursor: previousCursor ?? null, reset: true });
+  }
+
   return (
     <>
       {config.getBoolean('comment.enabled') &&
         <div className="m-2 flex flex-col justify-center items-center">
-          <CommentInput id={id} onRefresh={loadComments} />
+          <CommentInput id={id} onRefresh={reloadComments} />
           {error && (
             <>
               <div className="flex flex-col wauto rounded-2xl bg-w t-primary m-2 p-6 items-center justify-center">
                 <h1 className="text-xl font-bold t-primary">{error}</h1>
                 <button
                   className="mt-2 bg-theme text-white px-4 py-2 rounded-full"
-                  onClick={loadComments}
+                  onClick={reloadComments}
                 >
                   {t("reload")}
                 </button>
@@ -942,9 +1015,35 @@ function Comments({ id }: { id: string }) {
                   key={comment.id}
                   feedId={id}
                   comment={comment}
-                  onRefresh={loadComments}
+                  onRefresh={reloadComments}
                 />
               ))}
+            </div>
+          )}
+          <div ref={sentinelRef} className="h-6 w-full" />
+          {loading && <p className="my-3 text-sm t-secondary">{t("loading")}</p>}
+          {(reachedWindowLimit || previousCursors.length > 0) && (
+            <div className="my-3 flex items-center justify-center gap-2">
+              {previousCursors.length > 0 && (
+                <button
+                  type="button"
+                  onClick={loadPreviousWindow}
+                  disabled={loading}
+                  className="rounded-full border border-black/10 px-4 py-2 text-sm t-primary transition-colors hover:bg-black/5 disabled:opacity-60 dark:border-white/10 dark:hover:bg-white/5"
+                >
+                  {t("previous")}
+                </button>
+              )}
+              {hasNext && nextCursor && reachedWindowLimit && (
+                <button
+                  type="button"
+                  onClick={loadNextWindow}
+                  disabled={loading}
+                  className="rounded-full bg-theme px-4 py-2 text-sm text-white transition-colors hover:bg-theme-hover disabled:opacity-60"
+                >
+                  {t("next")}
+                </button>
+              )}
             </div>
           )}
         </div>

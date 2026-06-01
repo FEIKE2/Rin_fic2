@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 const created_at = integer("created_at", { mode: 'timestamp' }).default(sql`(unixepoch())`).notNull();
 const updated_at = integer("updated_at", { mode: 'timestamp' }).default(sql`(unixepoch())`).notNull();
@@ -107,10 +107,14 @@ export const comments = sqliteTable("comments", {
     guestName: text("guest_name").default(""),
     guestContact: text("guest_contact").default(""),
     approved: integer("approved").default(1).notNull(),
+    likeCount: integer("like_count").default(0).notNull(),
     deletedAt: integer("deleted_at", { mode: 'timestamp' }),
     createdAt: created_at,
     updatedAt: updated_at,
-});
+}, (table) => ({
+    feedParentCreatedIdx: index("idx_comments_feed_parent_created_id").on(table.feedId, table.parentId, table.createdAt, table.id),
+    userCreatedIdx: index("idx_comments_user_created_id").on(table.userId, table.createdAt, table.id),
+}));
 
 export const commentLikes = sqliteTable("comment_likes", {
     id: integer("id").primaryKey(),
@@ -119,6 +123,7 @@ export const commentLikes = sqliteTable("comment_likes", {
     createdAt: created_at,
 }, (table) => ({
     uniq: unique().on(table.commentId, table.userId),
+    userCommentIdx: index("idx_comment_likes_user_comment").on(table.userId, table.commentId),
 }));
 
 export const feedEditHistory = sqliteTable("feed_edit_history", {

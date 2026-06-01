@@ -166,10 +166,14 @@ describe('API Client', () => {
 
   describe('Comment API', () => {
     it('should fetch comments for feed', async () => {
-      const mockResponse = [
-        { id: 1, content: 'Comment 1', user: { id: 1, username: 'user1' } },
-        { id: 2, content: 'Comment 2', user: { id: 2, username: 'user2' } },
-      ]
+      const mockResponse = {
+        data: [
+          { id: 1, content: 'Comment 1', user: { id: 1, username: 'user1' } },
+          { id: 2, content: 'Comment 2', user: { id: 2, username: 'user2' } },
+        ],
+        hasNext: false,
+        nextCursor: null,
+      }
 
       mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
@@ -182,6 +186,24 @@ describe('API Client', () => {
       expect(result.data).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost/api/comment/1',
+        expect.any(Object)
+      )
+    })
+
+    it('should list comments with pagination params', async () => {
+      const mockResponse = { data: [], hasNext: true, nextCursor: '123:4' }
+
+      mockFetch.mockResolvedValueOnce(createMockResponse({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        json: async () => mockResponse,
+      }))
+
+      const result = await api.comment.list(1, { limit: 30, cursor: '100:2' })
+
+      expect(result.data).toEqual(mockResponse)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost/api/comment/1?limit=30&cursor=100%3A2',
         expect.any(Object)
       )
     })

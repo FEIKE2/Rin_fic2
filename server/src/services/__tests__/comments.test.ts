@@ -59,11 +59,11 @@ describe('CommentService', () => {
             
             expect(res.status).toBe(200);
             const data = await res.json() as any;
-            expect(data).toBeArray();
-            expect(data.length).toBe(2);
-            expect(data[0]).toHaveProperty('content');
-            expect(data[0]).toHaveProperty('user');
-            expect(data[0].user).toHaveProperty('username');
+            expect(data.data).toBeArray();
+            expect(data.data.length).toBe(2);
+            expect(data.data[0]).toHaveProperty('content');
+            expect(data.data[0]).toHaveProperty('user');
+            expect(data.data[0].user).toHaveProperty('username');
         });
 
         it('should return empty array when feed has no comments', async () => {
@@ -74,7 +74,7 @@ describe('CommentService', () => {
             
             expect(res.status).toBe(200);
             const data = await res.json() as any;
-            expect(data).toEqual([]);
+            expect(data.data).toEqual([]);
         });
 
         it('should not expose sensitive fields', async () => {
@@ -82,17 +82,17 @@ describe('CommentService', () => {
             
             expect(res.status).toBe(200);
             const data = await res.json() as any;
-            expect(data.length).toBeGreaterThan(0);
+            expect(data.data.length).toBeGreaterThan(0);
             
             // Should not include feedId and userId (excluded in query)
-            expect(data[0]).not.toHaveProperty('feedId');
-            expect(data[0]).not.toHaveProperty('userId');
+            expect(data.data[0]).not.toHaveProperty('feedId');
+            expect(data.data[0]).not.toHaveProperty('userId');
             
             // Should include user info
-            expect(data[0].user).toHaveProperty('id');
-            expect(data[0].user).toHaveProperty('username');
-            expect(data[0].user).toHaveProperty('avatar');
-            expect(data[0].user).toHaveProperty('permission');
+            expect(data.data[0].user).toHaveProperty('id');
+            expect(data.data[0].user).toHaveProperty('username');
+            expect(data.data[0].user).toHaveProperty('avatar');
+            expect(data.data[0].user).toHaveProperty('permission');
         });
 
         it('should order comments by createdAt descending', async () => {
@@ -100,7 +100,24 @@ describe('CommentService', () => {
             
             expect(res.status).toBe(200);
             const data = await res.json() as any;
-            expect(data.length).toBe(2);
+            expect(data.data.length).toBe(2);
+        });
+
+        it('should paginate top-level comments with a cursor', async () => {
+            const firstRes = await app.request('/1?limit=1', { method: 'GET' }, env);
+
+            expect(firstRes.status).toBe(200);
+            const first = await firstRes.json() as any;
+            expect(first.data).toHaveLength(1);
+            expect(first.hasNext).toBe(true);
+            expect(first.nextCursor).toBeString();
+
+            const secondRes = await app.request(`/1?limit=1&cursor=${encodeURIComponent(first.nextCursor)}`, { method: 'GET' }, env);
+
+            expect(secondRes.status).toBe(200);
+            const second = await secondRes.json() as any;
+            expect(second.data).toHaveLength(1);
+            expect(second.data[0].id).not.toBe(first.data[0].id);
         });
 
         it('should hide comments for draft feeds', async () => {
@@ -110,7 +127,7 @@ describe('CommentService', () => {
             const res = await app.request('/4', { method: 'GET' }, env);
 
             expect(res.status).toBe(200);
-            expect(await res.json() as any).toEqual([]);
+            expect(await res.json() as any).toMatchObject({ data: [] });
         });
     });
 
@@ -176,8 +193,8 @@ describe('CommentService', () => {
 
             const res = await app.request('/1', { method: 'GET' }, env);
             expect(res.status).toBe(200);
-            const data = await res.json() as any[];
-            const guestComment = data.find((c: any) => c.guestName === 'Guest');
+            const data = await res.json() as any;
+            const guestComment = data.data.find((c: any) => c.guestName === 'Guest');
             expect(guestComment).toBeDefined();
             expect(guestComment.user).toBeNull();
             expect(guestComment.content).toBe('Hi from guest');
@@ -196,8 +213,8 @@ describe('CommentService', () => {
             expect(res.status).toBe(200);
 
             const listRes = await app.request('/1', { method: 'GET' }, env);
-            const data = await listRes.json() as any[];
-            const parent = data.find((comment) => comment.id === 1);
+            const data = await listRes.json() as any;
+            const parent = data.data.find((comment: any) => comment.id === 1);
 
             expect(parent).toBeDefined();
             expect(parent.replies).toHaveLength(1);
@@ -373,6 +390,7 @@ describe('CommentService', () => {
 
             expect(likeRes.status).toBe(200);
             expect(await likeRes.json() as any).toEqual({ liked: true });
+            expect((sqlite.prepare(`SELECT like_count FROM comments WHERE id = 1`).get() as any).like_count).toBe(1);
 
             const unlikeRes = await app.request('/1/like', {
                 method: 'POST',
@@ -381,6 +399,7 @@ describe('CommentService', () => {
 
             expect(unlikeRes.status).toBe(200);
             expect(await unlikeRes.json() as any).toEqual({ liked: false });
+            expect((sqlite.prepare(`SELECT like_count FROM comments WHERE id = 1`).get() as any).like_count).toBe(0);
         });
 
         it('should require authentication to like a comment', async () => {
@@ -395,6 +414,7 @@ describe('CommentService', () => {
                     (1, 1),
                     (1, 2)
             `);
+            sqlite.exec(`UPDATE comments SET like_count = 2 WHERE id = 1`);
 
             const res = await app.request('/1', {
                 method: 'GET',
@@ -402,8 +422,8 @@ describe('CommentService', () => {
             }, env);
 
             expect(res.status).toBe(200);
-            const data = await res.json() as any[];
-            const comment = data.find((item) => item.id === 1);
+            const data = await res.json() as any;
+            const comment = data.data.find((item: any) => item.id === 1);
 
             expect(comment.likes).toBe(2);
             expect(comment.liked).toBe(true);
@@ -496,8 +516,8 @@ describe('CommentService', () => {
             expect(deleteRes.status).toBe(200);
 
             const listRes = await app.request('/1', { method: 'GET' }, env);
-            const data = await listRes.json() as any[];
-            const parent = data.find((comment) => comment.id === 1);
+            const data = await listRes.json() as any;
+            const parent = data.data.find((comment: any) => comment.id === 1);
             const reply = parent.replies.find((comment: any) => comment.id === 10);
 
             expect(reply.replyTo).toEqual({

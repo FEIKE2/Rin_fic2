@@ -231,6 +231,12 @@ export interface Comment {
   replies?: Comment[];
 }
 
+export interface CommentListResponse {
+  data: Comment[];
+  hasNext: boolean;
+  nextCursor: string | null;
+}
+
 export interface CreateCommentRequest {
   content: string;
   /** 回复的父评论 ID */

@@ -253,19 +253,19 @@ export function WritingPage({ id }: { id?: number }) {
     return (
       <div className={`flex items-center gap-2 ${className ?? ""}`}>
         <button
+          onClick={() => submitFeed(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-transparent px-5 py-3 text-sm font-medium t-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:bg-white/5"
+          disabled={publishing}
+        >
+          <span>{t('draft_save')}</span>
+        </button>
+        <button
           onClick={() => submitFeed(false)}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-theme px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-theme-hover active:bg-theme-active disabled:cursor-not-allowed disabled:opacity-60"
           disabled={publishing}
         >
           {publishing && <Loading type="spin" height={16} width={16} />}
           <span>{t('publish.title')}</span>
-        </button>
-        <button
-          onClick={() => submitFeed(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-transparent px-5 py-3 text-sm font-medium t-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:bg-white/5"
-          disabled={publishing}
-        >
-          <span>{t('draft_save')}</span>
         </button>
       </div>
     );

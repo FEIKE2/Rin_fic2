@@ -19,6 +19,7 @@ import type {
   Tag,
   TagDetail,
   Comment,
+  CommentListResponse,
   CreateCommentRequest,
   Friend,
   FriendListResponse,
@@ -368,8 +369,12 @@ class CommentAPI {
   constructor(private http: HttpClient) {}
 
   // GET /api/comment/:feed
-  async list(feedId: number): Promise<ApiResponse<Comment[]>> {
-    return this.http.get<Comment[]>(`/api/comment/${feedId}`);
+  async list(feedId: number, params?: { limit?: number; cursor?: string | null }): Promise<ApiResponse<CommentListResponse>> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set("limit", String(params.limit));
+    if (params?.cursor) searchParams.set("cursor", params.cursor);
+    const query = searchParams.toString();
+    return this.http.get<CommentListResponse>(`/api/comment/${feedId}${query ? `?${query}` : ""}`);
   }
 
   // POST /api/comment/:feed

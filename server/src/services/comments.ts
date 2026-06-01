@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppContext } from "../core/hono-types";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { commentLikes, comments, feeds, users } from "../db/schema";
 import { profileAsync } from "../core/server-timing";
 import { notify } from "../utils/webhook";
@@ -13,68 +13,87 @@ export function CommentService(): Hono {
 
     app.get('/:feed', async (c: AppContext) => {
         const db = c.get('db');
+        const uid = c.get('uid');
         const feedId = parseInt(c.req.param('feed'));
+        const limit = clampCommentLimit(c.req.query('limit'));
+        const cursor = parseCommentCursor(c.req.query('cursor'));
 
         const feed = await profileAsync(c, 'comment_list_feed', () =>
             db.query.feeds.findFirst({ where: eq(feeds.id, feedId), columns: { draft: true } })
         );
         if (feed?.draft) {
-            return c.json([]);
+            return c.json({ data: [], hasNext: false, nextCursor: null });
         }
-        
-        const comment_list = await profileAsync(c, 'comment_list_db', () => db.query.comments.findMany({
-            where: eq(comments.feedId, feedId),
+
+        const cursorWhere = cursor
+            ? or(
+                lt(comments.createdAt, cursor.createdAt),
+                and(eq(comments.createdAt, cursor.createdAt), lt(comments.id, cursor.id)),
+            )
+            : undefined;
+        const topLevelWhere = and(
+            eq(comments.feedId, feedId),
+            isNull(comments.parentId),
+            cursorWhere,
+        );
+
+        const topLevelRows = await profileAsync(c, 'comment_list_top_level', () => db.query.comments.findMany({
+            where: topLevelWhere,
             columns: { feedId: false, userId: false },
             with: {
                 user: {
                     columns: { id: true, username: true, avatar: true, permission: true }
                 }
             },
-            orderBy: [desc(comments.createdAt)]
+            orderBy: [desc(comments.createdAt), desc(comments.id)],
+            limit: limit + 1,
         }));
 
+        const hasNext = topLevelRows.length > limit;
+        const topLevelPage = hasNext ? topLevelRows.slice(0, limit) : topLevelRows;
+        const topLevelIds = topLevelPage.map((comment: any) => comment.id);
+
+        const replyRows = topLevelIds.length > 0
+            ? await profileAsync(c, 'comment_list_replies', () => db.query.comments.findMany({
+                where: inArray(comments.parentId, topLevelIds),
+                columns: { feedId: false, userId: false },
+                with: {
+                    user: {
+                        columns: { id: true, username: true, avatar: true, permission: true }
+                    }
+                },
+                orderBy: [asc(comments.createdAt), asc(comments.id)],
+            }))
+            : [];
+
+        const comment_list = [...topLevelPage, ...replyRows];
         const commentIds = comment_list.map((comment: any) => comment.id);
         const commentById = new Map(comment_list.map((comment: any) => [comment.id, comment]));
-        const likeCounts = new Map<number, number>();
         const likedIds = new Set<number>();
 
-        if (commentIds.length > 0) {
-            const counts = await profileAsync(c, 'comment_list_like_counts', () =>
-                db
-                    .select({ commentId: commentLikes.commentId, count: count() })
-                    .from(commentLikes)
-                    .where(inArray(commentLikes.commentId, commentIds))
-                    .groupBy(commentLikes.commentId)
+        if (uid && commentIds.length > 0) {
+            const liked = await profileAsync(c, 'comment_list_liked', () =>
+                db.query.commentLikes.findMany({
+                    where: and(
+                        eq(commentLikes.userId, uid),
+                        inArray(commentLikes.commentId, commentIds),
+                    ),
+                    columns: { commentId: true },
+                })
             );
 
-            for (const item of counts) {
-                likeCounts.set(item.commentId, item.count);
-            }
-
-            const uid = c.get('uid');
-            if (uid) {
-                const liked = await profileAsync(c, 'comment_list_liked', () =>
-                    db.query.commentLikes.findMany({
-                        where: and(
-                            eq(commentLikes.userId, uid),
-                            inArray(commentLikes.commentId, commentIds),
-                        ),
-                        columns: { commentId: true },
-                    })
-                );
-
-                for (const item of liked) {
-                    likedIds.add(item.commentId);
-                }
+            for (const item of liked) {
+                likedIds.add(item.commentId);
             }
         }
         
         // 将结果统一为前端兼容格式：登录用户用 user 字段，游客用 guestName 等
         const normalized = comment_list.map((c: any) => {
+            const { likeCount, ...comment } = c;
             const base = {
-                ...c,
-                likes: likeCounts.get(c.id) ?? 0,
-                liked: likedIds.has(c.id),
+                ...comment,
+                likes: Number(likeCount ?? 0),
+                liked: likedIds.has(comment.id),
                 replyTo: buildReplyTarget(c, commentById),
                 replies: [],
             };
@@ -108,8 +127,13 @@ export function CommentService(): Hono {
                 topLevel.push(reply);
             }
         }
-        
-        return c.json(topLevel);
+
+        const last = topLevelPage[topLevelPage.length - 1];
+        return c.json({
+            data: topLevel,
+            hasNext,
+            nextCursor: hasNext && last ? encodeCommentCursor(last) : null,
+        });
     });
 
     app.post('/:feed', async (c: AppContext) => {
@@ -300,11 +324,21 @@ export function CommentService(): Hono {
             await profileAsync(c, 'comment_like_delete', () =>
                 db.delete(commentLikes).where(and(eq(commentLikes.commentId, id), eq(commentLikes.userId, uid)))
             );
+            await profileAsync(c, 'comment_like_count_decrement', () =>
+                db.update(comments)
+                    .set({ likeCount: sql`max(0, ${comments.likeCount} - 1)` })
+                    .where(eq(comments.id, id))
+            );
             return c.json({ liked: false });
         }
 
         await profileAsync(c, 'comment_like_insert', () =>
             db.insert(commentLikes).values({ commentId: id, userId: uid })
+        );
+        await profileAsync(c, 'comment_like_count_increment', () =>
+            db.update(comments)
+                .set({ likeCount: sql`${comments.likeCount} + 1` })
+                .where(eq(comments.id, id))
         );
         return c.json({ liked: true });
     });
@@ -383,4 +417,37 @@ function buildReplyTarget(comment: any, commentById: Map<number, any>) {
         content: null,
         deleted: true,
     };
+}
+
+function clampCommentLimit(raw?: string) {
+    const parsed = Number.parseInt(raw || "", 10);
+    if (!Number.isFinite(parsed)) {
+        return 30;
+    }
+    return Math.min(Math.max(parsed, 1), 100);
+}
+
+function parseCommentCursor(raw?: string) {
+    if (!raw) {
+        return null;
+    }
+
+    const [time, id] = raw.split(":");
+    const timestamp = Number.parseInt(time || "", 10);
+    const parsedId = Number.parseInt(id || "", 10);
+    if (!Number.isFinite(timestamp) || !Number.isFinite(parsedId)) {
+        return null;
+    }
+
+    return {
+        createdAt: new Date(timestamp),
+        id: parsedId,
+    };
+}
+
+function encodeCommentCursor(comment: any) {
+    const createdAt = comment.createdAt instanceof Date
+        ? comment.createdAt
+        : new Date(comment.createdAt);
+    return `${createdAt.getTime()}:${comment.id}`;
 }

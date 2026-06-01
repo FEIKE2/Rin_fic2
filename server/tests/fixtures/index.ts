@@ -123,6 +123,7 @@ export function createMockDB() {
             guest_name TEXT DEFAULT '',
             guest_contact TEXT DEFAULT '',
             approved INTEGER DEFAULT 1 NOT NULL,
+            like_count INTEGER DEFAULT 0 NOT NULL,
             deleted_at INTEGER,
             created_at INTEGER DEFAULT (unixepoch()),
             updated_at INTEGER DEFAULT (unixepoch()),
@@ -131,6 +132,9 @@ export function createMockDB() {
             FOREIGN KEY (reply_to_id) REFERENCES comments(id) ON DELETE SET NULL,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE INDEX IF NOT EXISTS idx_comments_feed_parent_created_id ON comments(feed_id, parent_id, created_at, id);
+        CREATE INDEX IF NOT EXISTS idx_comments_user_created_id ON comments(user_id, created_at, id);
 
         CREATE TABLE IF NOT EXISTS comment_likes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,6 +145,8 @@ export function createMockDB() {
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             UNIQUE(comment_id, user_id)
         );
+
+        CREATE INDEX IF NOT EXISTS idx_comment_likes_user_comment ON comment_likes(user_id, comment_id);
 
         CREATE TABLE IF NOT EXISTS feed_edit_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

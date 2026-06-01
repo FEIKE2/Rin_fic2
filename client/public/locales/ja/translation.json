@@ -652,7 +652,7 @@
   "url": "サイトURL",
   "visible": {
     "self_only": "自分のみ可視",
-    "login_only": "ログイン後のみ表示",
+    "login_only": "ログイン済みユーザーのみ表示",
     "login_to_view": "閲覧するにはログインしてください"
   },
   "writing": "執筆",

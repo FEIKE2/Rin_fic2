@@ -661,7 +661,7 @@
   "url": "站点 URL",
   "visible": {
     "self_only": "仅自己可见",
-    "login_only": "仅登录可见",
+    "login_only": "仅已登录用户可见",
     "login_to_view": "请登录后查看"
   },
   "writing": "写作",

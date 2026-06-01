@@ -661,7 +661,7 @@
   "url": "網站 URL",
   "visible": {
     "self_only": "僅自己可見",
-    "login_only": "僅登入可見",
+    "login_only": "僅已登入使用者可見",
     "login_to_view": "請登入後查看"
   },
   "writing": "寫作",
