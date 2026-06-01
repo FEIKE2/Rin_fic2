@@ -167,8 +167,9 @@ export function ConfigService(): Hono {
         const serverConfig = c.get('serverConfig');
         const clientConfig = c.get('clientConfig');
         const env = c.get('env');
+        const db = c.get('db');
 
-        return c.json(await wrapTime(c, 'health_check', buildHealthCheckResponse(clientConfig, serverConfig, env)));
+        return c.json(await wrapTime(c, 'health_check', buildHealthCheckResponse(clientConfig, serverConfig, env, db)));
     });
 
     app.get('/queue-status', async (c: AppContext) => {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppContext } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
 import { getStorageObject, putStorageObject } from "../utils/storage";
+import { uploads } from "../db/schema";
 
 function buf2hex(buffer: ArrayBuffer) {
     return [...new Uint8Array(buffer)]
@@ -36,6 +37,17 @@ export function StorageService(): Hono {
         
         try {
             const result = await profileAsync(c, 'storage_put', () => putStorageObject(env, hashkey, file, file.type, new URL(c.req.url).origin));
+            // 登记上传（best-effort）：result.key 为含前缀的规范 key（images/<sha1>.<ext>），
+            // 与「图片回收」扫描所用子串一致。失败不影响上传主流程。
+            try {
+                const db = c.get('db');
+                await db
+                    .insert(uploads)
+                    .values({ storageKey: result.key, url: result.url, uid: Number(uid) })
+                    .onConflictDoNothing();
+            } catch (registerError: any) {
+                console.error('Failed to register upload:', registerError?.message ?? registerError);
+            }
             return c.json({ url: result.url });
         } catch (e: any) {
             console.error(e.message);

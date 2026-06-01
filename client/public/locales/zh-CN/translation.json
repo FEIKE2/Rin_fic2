@@ -819,6 +819,26 @@
           "summary": "站点名称未配置。",
           "suggestion": "请在设置中配置 site.name，或在环境变量中设置 NAME。"
         }
+      },
+      "image_recycling": {
+        "title": "图片回收",
+        "success": {
+          "impact": "上传的图片都还在被内容引用，没有需要清理的悬空图片。",
+          "summary": "暂无悬空超过 24 小时的未引用图片。"
+        },
+        "warning": {
+          "impact": "以下图片已登记上传但当前未被任何文章、评论、动态或站点配置引用。",
+          "summary": "共 {{total}} 张未引用图片，其中 {{over7}} 张已悬空 7 天以上。",
+          "suggestion": "本表仅供参考、不会自动删除；请核实确无引用后再自行在存储桶中清理。"
+        },
+        "columns": {
+          "name": "图片",
+          "location": "存储位置",
+          "user": "上传用户",
+          "days": "悬空天数"
+        },
+        "anonymous": "（用户已注销）",
+        "truncated": "未引用图片较多，仅显示悬空时间最长的前 200 张（共 {{total}} 张）。"
       }
     },
     "load_failed": "健康检查加载失败",

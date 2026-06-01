@@ -158,6 +158,18 @@ export const cache = sqliteTable("cache", {
     keyTypeUnique: unique().on(table.key, table.type),
 }));
 
+// 用户上传图片登记表：仅记录经 POST /api/storage 上传的图片（强制登录）。
+// 用于「图片回收」健康检查只读呈现，不做任何删除。
+export const uploads = sqliteTable("uploads", {
+    id: integer("id").primaryKey(),
+    storageKey: text("storage_key").notNull(),
+    url: text("url").notNull(),
+    uid: integer("uid").references(() => users.id, { onDelete: 'set null' }),
+    createdAt: created_at,
+}, (table) => ({
+    storageKeyUnique: unique().on(table.storageKey),
+}));
+
 export const feedsRelations = relations(feeds, ({ many, one }) => ({
     hashtags: many(feedHashtags),
     user: one(users, {

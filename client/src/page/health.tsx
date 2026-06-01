@@ -1,5 +1,5 @@
 import { SettingsBadge, SettingsCard, SettingsCardBody, SettingsCardHeader } from "@rin/ui";
-import type { ConfigHealthItem } from "../api/client";
+import type { ConfigHealthCell, ConfigHealthItem } from "../api/client";
 import { client } from "../app/runtime";
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
@@ -12,6 +12,56 @@ function renderHealthText(
   text: ConfigHealthItem["title"],
 ) {
   return t(text.key, text.values);
+}
+
+function cellToneClass(tone?: ConfigHealthCell["tone"]) {
+  if (tone === "red") return "text-red-600 dark:text-red-400 font-semibold";
+  if (tone === "amber") return "text-amber-600 dark:text-amber-400 font-medium";
+  return "";
+}
+
+function HealthTable({ table }: { table: NonNullable<ConfigHealthItem["table"]> }) {
+  const { t } = useTranslation();
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-xs">
+        <thead>
+          <tr className="border-b border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400">
+            {table.columns.map((col, i) => (
+              <th key={`col-${i}`} className="px-2 py-1.5 font-medium whitespace-nowrap">
+                {renderHealthText(t, col)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, ri) => (
+            <tr key={`row-${ri}`} className="border-b border-neutral-100 dark:border-neutral-800">
+              {row.map((cell, ci) => {
+                const content = cell.text ? renderHealthText(t, cell.text) : cell.raw ?? "";
+                return (
+                  <td key={`cell-${ri}-${ci}`} className={`px-2 py-1.5 align-top ${cellToneClass(cell.tone)}`}>
+                    {cell.href ? (
+                      <a
+                        href={cell.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#0686c8] dark:text-[#2590f1] hover:underline break-all"
+                      >
+                        {content}
+                      </a>
+                    ) : (
+                      <span className="break-all">{content}</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function HealthCard({ item }: { item: ConfigHealthItem }) {
@@ -43,6 +93,7 @@ function HealthCard({ item }: { item: ConfigHealthItem }) {
               ))}
             </ul>
           ) : null}
+          {item.table?.rows.length ? <HealthTable table={item.table} /> : null}
         </div>
       </SettingsCardBody>
     </SettingsCard>

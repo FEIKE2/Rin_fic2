@@ -147,6 +147,25 @@ describe("ConfigService", () => {
             expect(typeof data.summary.success).toBe("number");
         });
 
+        it("should report image recycling as success when no uploads are dangling", async () => {
+            const res = await app.request("/health", {
+                method: "GET",
+                headers: {
+                    Authorization: "Bearer mock_token_1",
+                },
+            });
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as {
+                items: Array<{ id: string; status: string; summary: { key: string }; table?: unknown }>;
+            };
+            const item = data.items.find((i) => i.id === "image-recycling");
+            expect(item).toBeDefined();
+            expect(item?.status).toBe("success");
+            expect(item?.summary.key).toBe("health.items.image_recycling.success.summary");
+            expect(item?.table).toBeUndefined();
+        });
+
         it("should mark default password login as danger", async () => {
             env.ADMIN_USERNAME = "admin" as any;
             env.ADMIN_PASSWORD = "admin123" as any;

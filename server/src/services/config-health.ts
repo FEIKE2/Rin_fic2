@@ -1,5 +1,7 @@
 import { WEBHOOK_URL_KEY } from "@rin/config";
 import { getAIConfig } from "../utils/db-config";
+import type { DB } from "../core/hono-types";
+import { findDanglingUploads } from "./image-recycling";
 
 type HealthStatus = "success" | "warning" | "danger";
 type HealthTextValues = Record<string, string | number | boolean>;
@@ -7,6 +9,20 @@ type HealthTextValues = Record<string, string | number | boolean>;
 export interface HealthText {
   key: string;
   values?: HealthTextValues;
+}
+
+export type HealthCellTone = "normal" | "amber" | "red";
+
+export interface HealthCell {
+  text?: HealthText;
+  raw?: string;
+  href?: string;
+  tone?: HealthCellTone;
+}
+
+export interface HealthTable {
+  columns: HealthText[];
+  rows: HealthCell[][];
 }
 
 export interface HealthCheckItem {
@@ -18,6 +34,7 @@ export interface HealthCheckItem {
   summary: HealthText;
   suggestion?: HealthText;
   details?: HealthText[];
+  table?: HealthTable;
 }
 
 export interface HealthCheckResponse {
@@ -45,6 +62,7 @@ export async function buildHealthCheckResponse(
   clientConfig: { get: (key: string) => Promise<any>; getOrDefault: <T>(key: string, defaultValue: T) => Promise<T> },
   serverConfig: { get: (key: string) => Promise<any>; getOrDefault: <T>(key: string, defaultValue: T) => Promise<T> },
   env: Env,
+  db: DB,
 ): Promise<HealthCheckResponse> {
   const [
     loginEnabled,
@@ -387,6 +405,61 @@ export async function buildHealthCheckResponse(
           },
     ),
   );
+
+  // 图片回收：列出登记表中当前未被任何内容引用、且悬空 >24h 的用户上传图片（只读，不删除）
+  const dangling = await findDanglingUploads(db);
+  if (dangling.total === 0) {
+    items.push(
+      createItem({
+        id: "image-recycling",
+        title: text("health.items.image_recycling.title"),
+        status: "success",
+        configured: true,
+        impact: text("health.items.image_recycling.success.impact"),
+        summary: text("health.items.image_recycling.success.summary"),
+        suggestion: text("health.items.common.no_action"),
+      }),
+    );
+  } else {
+    const details: HealthText[] = [];
+    if (dangling.truncated) {
+      details.push(text("health.items.image_recycling.truncated", { total: dangling.total }));
+    }
+    items.push(
+      createItem({
+        id: "image-recycling",
+        title: text("health.items.image_recycling.title"),
+        status: dangling.over7 > 0 ? "warning" : "success",
+        configured: true,
+        impact: text("health.items.image_recycling.warning.impact"),
+        summary: text("health.items.image_recycling.warning.summary", {
+          total: dangling.total,
+          over7: dangling.over7,
+        }),
+        suggestion: text("health.items.image_recycling.warning.suggestion"),
+        details: details.length > 0 ? details : undefined,
+        table: {
+          columns: [
+            text("health.items.image_recycling.columns.name"),
+            text("health.items.image_recycling.columns.location"),
+            text("health.items.image_recycling.columns.user"),
+            text("health.items.image_recycling.columns.days"),
+          ],
+          rows: dangling.rows.map((row) => [
+            { raw: row.storageKey.split("/").pop() || row.storageKey, href: row.url },
+            { raw: row.storageKey },
+            row.username
+              ? { raw: row.username }
+              : { text: text("health.items.image_recycling.anonymous") },
+            {
+              raw: String(row.danglingDays),
+              tone: row.danglingDays >= 30 ? "red" : row.danglingDays >= 7 ? "amber" : "normal",
+            },
+          ]),
+        },
+      }),
+    );
+  }
 
   const summary = items.reduce(
     (result, item) => {

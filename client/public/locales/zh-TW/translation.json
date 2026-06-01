@@ -819,6 +819,26 @@
           "summary": "網站名稱未配置。",
           "suggestion": "請在設定中配置 site.name，或在環境變數中設定 NAME。"
         }
+      },
+      "image_recycling": {
+        "title": "圖片回收",
+        "success": {
+          "impact": "上傳的圖片都還在被內容引用，沒有需要清理的懸空圖片。",
+          "summary": "暫無懸空超過 24 小時的未引用圖片。"
+        },
+        "warning": {
+          "impact": "以下圖片已登記上傳但目前未被任何文章、留言、動態或網站配置引用。",
+          "summary": "共 {{total}} 張未引用圖片，其中 {{over7}} 張已懸空 7 天以上。",
+          "suggestion": "本表僅供參考、不會自動刪除；請核實確無引用後再自行在儲存桶中清理。"
+        },
+        "columns": {
+          "name": "圖片",
+          "location": "儲存位置",
+          "user": "上傳用戶",
+          "days": "懸空天數"
+        },
+        "anonymous": "（用戶已註銷）",
+        "truncated": "未引用圖片較多，僅顯示懸空時間最長的前 200 張（共 {{total}} 張）。"
       }
     },
     "load_failed": "健康檢查載入失敗",

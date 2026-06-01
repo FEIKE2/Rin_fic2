@@ -210,6 +210,18 @@ export function createMockDB() {
 
         CREATE INDEX IF NOT EXISTS idx_cache_type ON cache(type);
         CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(key);
+
+        -- Uploads registry table (image recycling)
+        CREATE TABLE IF NOT EXISTS uploads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            storage_key TEXT NOT NULL,
+            url TEXT NOT NULL,
+            uid INTEGER,
+            created_at INTEGER DEFAULT (unixepoch()) NOT NULL,
+            FOREIGN KEY (uid) REFERENCES users(id) ON DELETE SET NULL
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uploads_storage_key_unique ON uploads(storage_key);
     `);
 
     return { db, sqlite };

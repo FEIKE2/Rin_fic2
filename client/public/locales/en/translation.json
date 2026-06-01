@@ -819,6 +819,26 @@
           "summary": "Site name is not configured.",
           "suggestion": "Set site.name in settings or NAME in the environment."
         }
+      },
+      "image_recycling": {
+        "title": "Image recycling",
+        "success": {
+          "impact": "Every uploaded image is still referenced by content; there are no dangling images to clean up.",
+          "summary": "No unreferenced images dangling for more than 24 hours."
+        },
+        "warning": {
+          "impact": "The images below were uploaded and registered but are no longer referenced by any post, comment, moment, or site config.",
+          "summary": "{{total}} unreferenced image(s), {{over7}} of which have been dangling for 7+ days.",
+          "suggestion": "This list is informational only and nothing is deleted automatically; verify there is truly no reference before cleaning them up in the bucket yourself."
+        },
+        "columns": {
+          "name": "Image",
+          "location": "Storage location",
+          "user": "Uploaded by",
+          "days": "Dangling days"
+        },
+        "anonymous": "(user deleted)",
+        "truncated": "Many unreferenced images; showing only the 200 longest-dangling ({{total}} total)."
       }
     },
     "load_failed": "Health check failed",

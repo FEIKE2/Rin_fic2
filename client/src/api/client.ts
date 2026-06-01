@@ -40,6 +40,23 @@ export interface SettingsConfigResponse {
   serverConfig: ConfigResponse;
 }
 
+export type ConfigHealthText = {
+  key: string;
+  values?: Record<string, string | number | boolean>;
+};
+
+export interface ConfigHealthCell {
+  text?: ConfigHealthText;
+  raw?: string;
+  href?: string;
+  tone?: "normal" | "amber" | "red";
+}
+
+export interface ConfigHealthTable {
+  columns: ConfigHealthText[];
+  rows: ConfigHealthCell[][];
+}
+
 export interface ConfigHealthItem {
   id: string;
   title: {
@@ -64,6 +81,7 @@ export interface ConfigHealthItem {
     key: string;
     values?: Record<string, string | number | boolean>;
   }>;
+  table?: ConfigHealthTable;
 }
 
 export interface ConfigHealthResponse {
