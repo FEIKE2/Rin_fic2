@@ -38,6 +38,7 @@ export interface Feed {
   pv: number;
   uv: number;
   top?: number;
+  loginRequired?: number;
 }
 
 export interface FeedListResponse {
@@ -60,6 +61,7 @@ export interface FeedListResponse {
     hotDynamicScore?: number;
     pv: number;
     uv: number;
+    loginRequired?: number;
   }>;
   hasNext: boolean;
 }
@@ -76,7 +78,8 @@ export interface CreateFeedRequest {
   summary?: string;
   alias?: string;
   draft: boolean;
-  listed: boolean;
+  listed?: boolean;
+  loginRequired?: boolean;
   createdAt?: string;
   tags: string[];
 }
@@ -86,8 +89,9 @@ export interface UpdateFeedRequest {
   content?: string;
   summary?: string;
   alias?: string;
-  listed: boolean;
+  listed?: boolean;
   draft?: boolean;
+  loginRequired?: boolean;
   createdAt?: string;
   tags?: string[];
   top?: number;

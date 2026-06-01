@@ -18,7 +18,7 @@ import { MarkdownEditor } from '../components/markdown_editor';
 async function publish({
   title,
   alias,
-  listed,
+  loginRequired,
   content,
   summary,
   tags,
@@ -28,7 +28,7 @@ async function publish({
   showAlert
 }: {
   title: string;
-  listed: boolean;
+  loginRequired: boolean;
   content: string;
   summary: string;
   tags: string[];
@@ -46,8 +46,8 @@ async function publish({
       content,
       summary,
       tags,
-      listed,
       draft,
+      loginRequired,
       createdAt: createdAt?.toISOString(),
     }
   );
@@ -72,7 +72,7 @@ async function update({
   content,
   summary,
   tags,
-  listed,
+  loginRequired,
   draft,
   createdAt,
   editReason,
@@ -80,7 +80,7 @@ async function update({
   showAlert
 }: {
   id: number;
-  listed: boolean;
+  loginRequired: boolean;
   title?: string;
   alias?: string;
   content?: string;
@@ -101,8 +101,8 @@ async function update({
       content,
       summary,
       tags,
-      listed,
       draft,
+      loginRequired,
       createdAt: createdAt?.toISOString(),
       editReason,
     }
@@ -132,7 +132,7 @@ export function WritingPage({ id }: { id?: number }) {
   const [tags, setTags] = cache.useCache("tags", "");
   const [alias, setAlias] = cache.useCache("alias", "");
   const [draft, setDraft] = useState(false);
-  const [listed, setListed] = useState(true);
+  const [loginRequired, setLoginRequired] = useState(false);
   const [content, setContent] = cache.useCache("content", "");
   const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date());
   const [editReason, setEditReason] = useState("");
@@ -155,7 +155,7 @@ export function WritingPage({ id }: { id?: number }) {
         alias,
         tags: tagsplit,
         draft,
-        listed,
+        loginRequired,
         createdAt,
         editReason,
         onCompleted: () => {
@@ -180,7 +180,7 @@ export function WritingPage({ id }: { id?: number }) {
         tags: tagsplit,
         draft,
         alias,
-        listed,
+        loginRequired,
         createdAt,
         onCompleted: () => {
           setPublishing(false)
@@ -202,7 +202,7 @@ export function WritingPage({ id }: { id?: number }) {
             if (alias == "" && (data as any).alias) setAlias((data as any).alias);
             if (content == "") setContent(data.content);
             if (summary == "") setSummary((data as any).summary || "");
-            setListed((data as any).listed === 1);
+            setLoginRequired((data as any).loginRequired === 1);
             setDraft((data as any).draft === 1);
             setCreatedAt(new Date(data.createdAt));
           }
@@ -321,14 +321,14 @@ export function WritingPage({ id }: { id?: number }) {
             </FlatMetaRow>
             <FlatMetaRow
               className="cursor-pointer rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3"
-              onClick={() => setListed(!listed)}
+              onClick={() => setLoginRequired(!loginRequired)}
             >
-              <p className="min-w-0 whitespace-nowrap text-[clamp(0.75rem,1.1vw,0.875rem)]">{t('listed')}</p>
+              <p className="min-w-0 whitespace-nowrap text-[clamp(0.75rem,1.1vw,0.875rem)]">{t('visible.login_only')}</p>
               <Checkbox
-                id="listed"
-                value={listed}
-                setValue={setListed}
-                placeholder={t('listed')}
+                id="loginRequired"
+                value={loginRequired}
+                setValue={setLoginRequired}
+                placeholder={t('visible.login_only')}
               />
             </FlatMetaRow>
             <FlatMetaRow className="gap-3 rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3 xl:col-span-1">

@@ -40,18 +40,24 @@ export function FeedService(): Hono<{
         const db = c.get('db');
         const cache = c.get('cache');
         const admin = c.get('admin');
+        const uid = c.get('uid');
         const page = c.req.query('page');
         const limit = c.req.query('limit');
         const type = c.req.query('type');
         const sort = c.req.query('sort') === 'popular' ? 'popular' : 'latest';
 
-        if ((type === 'draft' || type === 'unlisted') && !admin) {
+        // 草稿（仅自己可见）：管理员可看全部，登录用户只看自己的，未登录禁止
+        if (type === 'draft') {
+            if (!uid) return c.text('Permission denied', 403);
+        } else if (type === 'unlisted' && !admin) {
             return c.text('Permission denied', 403);
         }
 
         const page_num = (page ? parseInt(page) > 0 ? parseInt(page) : 1 : 1) - 1;
         const limit_num = limit ? parseInt(limit) > 50 ? 50 : parseInt(limit) : 20;
-        const cacheKey = `feeds_${type}_${sort}_${page_num}_${limit_num}`;
+        // 普通用户的草稿列表只含本人，缓存键需带 uid 区分
+        const draftScope = type === 'draft' && !admin ? `_u${uid}` : '';
+        const cacheKey = `feeds_${type}_${sort}_${page_num}_${limit_num}${draftScope}`;
         const cached = await profileAsync(c, 'feed_list_cache_get', () => cache.get(cacheKey));
 
         if (cached && sort !== 'popular') {
@@ -59,7 +65,7 @@ export function FeedService(): Hono<{
         }
 
         const where = type === 'draft'
-            ? eq(feeds.draft, 1)
+            ? (admin ? eq(feeds.draft, 1) : and(eq(feeds.draft, 1), eq(feeds.uid, uid!)))
             : type === 'unlisted'
                 ? and(eq(feeds.draft, 0), eq(feeds.listed, 0))
                 : and(eq(feeds.draft, 0), eq(feeds.listed, 1));
@@ -133,7 +139,7 @@ export function FeedService(): Hono<{
         const admin = c.get('admin');
         const uid = c.get('uid');
         const body = await profileAsync(c, 'feed_create_parse', () => c.req.json());
-        const { title, alias, listed, content, summary, draft, tags, createdAt } = body;
+        const { title, alias, listed, content, summary, draft, loginRequired, tags, createdAt } = body;
 
         // 允许所有登录用户创建文章
         if (!uid) {
@@ -170,8 +176,9 @@ export function FeedService(): Hono<{
             ai_summary_error: "",
             uid,
             alias,
-            listed: listed ? 1 : 0,
+            listed: listed === false ? 0 : 1,
             draft: draft ? 1 : 0,
+            loginRequired: loginRequired ? 1 : 0,
             createdAt: date,
             updatedAt: date
         }).returning({ insertedId: feeds.id }));
@@ -224,6 +231,11 @@ export function FeedService(): Hono<{
 
         if (feed.draft && feed.uid !== uid && !admin) {
             return c.text('Permission denied', 403);
+        }
+
+        // 仅登录可见：未登录游客不能查看详情
+        if (feed.loginRequired && !uid) {
+            return c.text('Login required', 403);
         }
 
         const { hashtags, ...other } = feed;
@@ -312,7 +324,7 @@ export function FeedService(): Hono<{
 
         const feed = await profileAsync(c, 'feed_adjacent_current', () => db.query.feeds.findFirst({
             where: eq(feeds.id, id_num),
-            columns: { createdAt: true },
+            columns: { createdAt: true, uid: true },
         }));
 
         if (!feed) {
@@ -320,6 +332,7 @@ export function FeedService(): Hono<{
         }
 
         const created_at = feed.createdAt;
+        const author_uid = feed.uid;
 
         function formatAndCacheData(feed: any, feedDirection: "previous_feed" | "next_feed") {
             if (feed) {
@@ -350,7 +363,7 @@ export function FeedService(): Hono<{
                 return previousFeedCached[0];
             } else {
                 const tempPreviousFeed = await profileAsync(c, 'feed_adjacent_prev_db', () => db.query.feeds.findFirst({
-                    where: and(and(eq(feeds.draft, 0), eq(feeds.listed, 1)), lt(feeds.createdAt, created_at)),
+                    where: and(eq(feeds.draft, 0), eq(feeds.listed, 1), eq(feeds.uid, author_uid), lt(feeds.createdAt, created_at)),
                     orderBy: [desc(feeds.createdAt)],
                     with: {
                         hashtags: {
@@ -370,7 +383,7 @@ export function FeedService(): Hono<{
                 return nextFeedCached[0];
             } else {
                 const tempNextFeed = await profileAsync(c, 'feed_adjacent_next_db', () => db.query.feeds.findFirst({
-                    where: and(and(eq(feeds.draft, 0), eq(feeds.listed, 1)), gt(feeds.createdAt, created_at)),
+                    where: and(eq(feeds.draft, 0), eq(feeds.listed, 1), eq(feeds.uid, author_uid), gt(feeds.createdAt, created_at)),
                     orderBy: [asc(feeds.createdAt)],
                     with: {
                         hashtags: {
@@ -398,7 +411,7 @@ export function FeedService(): Hono<{
         const uid = c.get('uid');
         const id = c.req.param('id');
         const body = await profileAsync(c, 'feed_update_parse', () => c.req.json());
-        const { title, listed, content, summary, alias, draft, top, tags, createdAt, editReason } = body;
+        const { title, listed, content, summary, alias, draft, loginRequired, top, tags, createdAt, editReason } = body;
 
         const id_num = parseInt(id);
         const feed = await profileAsync(c, 'feed_update_lookup', () => db.query.feeds.findFirst({ where: eq(feeds.id, id_num) }));
@@ -440,8 +453,9 @@ export function FeedService(): Hono<{
             ai_summary_error: shouldQueueAISummary || isDraft ? "" : undefined,
             alias,
             top,
-            listed: listed ? 1 : 0,
+            listed: listed === undefined ? undefined : listed ? 1 : 0,
             draft: draft === undefined ? undefined : draft ? 1 : 0,
+            loginRequired: loginRequired === undefined ? undefined : loginRequired ? 1 : 0,
             createdAt: createdAt ? new Date(createdAt) : undefined,
             updatedAt: updateTime
         }).where(eq(feeds.id, id_num)));

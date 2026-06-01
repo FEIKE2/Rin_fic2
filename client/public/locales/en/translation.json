@@ -108,7 +108,9 @@
     "parent_deleted": "The comment you are replying to has been deleted",
     "guest_name_required": "Guest name is required",
     "guest_name_placeholder": "Name (required)",
-    "guest_contact_placeholder": "Contact (optional)"
+    "guest_contact_placeholder": "Contact (optional)",
+    "too_long": "Comment cannot exceed 150 characters",
+    "login_required_prompt": "Please log in to comment"
   },
   "comparison": "Comparison",
   "confirm": "Confirm",
@@ -221,6 +223,8 @@
     "total$count_other": "{{count}} moments in total"
   },
   "next": "Next Page",
+  "previous_post": "Previous",
+  "next_post": "Next",
   "no_more": "No More",
   "preview": "Preview",
   "previous": "Previous Page",
@@ -288,6 +292,10 @@
       "enable": {
         "desc": "Open/close the comment entry and comment area at the bottom of the article",
         "title": "Enable Comments"
+      },
+      "guest": {
+        "title": "Allow guest comments",
+        "desc": "When enabled, visitors who are not logged in can comment and reply; when disabled, only logged-in users can comment"
       }
     },
     "counter": {
@@ -595,7 +603,9 @@
   "uploading": "Uploading...",
   "url": "Site URL",
   "visible": {
-    "self_only": "Visible to self only"
+    "self_only": "Visible to self only",
+    "login_only": "Login required",
+    "login_to_view": "Please log in to view"
   },
   "writing": "Writing",
   "writing_upload": "Upload Post",

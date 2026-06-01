@@ -119,6 +119,10 @@ export function CommentService(): Hono {
         if (!content) {
             return c.text('Content is required', 400);
         }
+
+        if (typeof content === 'string' && content.length > 150) {
+            return c.text('Comment too long', 400);
+        }
         
         const exist = await profileAsync(c, 'comment_create_feed', () => db.query.feeds.findFirst({ where: eq(feeds.id, feedId) }));
         if (!exist) {

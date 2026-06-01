@@ -108,7 +108,9 @@
     "parent_deleted": "返信先のコメントは削除されました",
     "guest_name_required": "ゲスト名は必須です",
     "guest_name_placeholder": "名前（必須）",
-    "guest_contact_placeholder": "連絡先（任意）"
+    "guest_contact_placeholder": "連絡先（任意）",
+    "too_long": "コメントは150文字を超えられません",
+    "login_required_prompt": "コメントするにはログインしてください"
   },
   "comparison": "対比",
   "confirm": "確認",
@@ -212,6 +214,8 @@
     "total$count_other": "{{count}} 件の動態"
   },
   "next": "次のページ",
+  "previous_post": "前の記事",
+  "next_post": "次の記事",
   "no_more": "もうない",
   "preview": "プレビュー",
   "previous": "前のページ",
@@ -279,6 +283,10 @@
       "enable": {
         "desc": "記事下部のコメント入り口とコメントエリアの開閉",
         "title": "コメントを有効にする"
+      },
+      "guest": {
+        "title": "ゲストのコメントを許可",
+        "desc": "有効にするとログインしていないゲストもコメント・返信できます。無効の場合はログインユーザーのみコメントできます"
       }
     },
     "counter": {
@@ -586,7 +594,9 @@
   "uploading": "アップロード中",
   "url": "サイトURL",
   "visible": {
-    "self_only": "自分のみ可視"
+    "self_only": "自分のみ可視",
+    "login_only": "ログイン後のみ表示",
+    "login_to_view": "閲覧するにはログインしてください"
   },
   "writing": "執筆",
   "writing_upload": "投稿をアップロード",

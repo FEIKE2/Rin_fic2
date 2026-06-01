@@ -109,15 +109,15 @@ export function FeedsPage() {
                                 />
                                 {/* 排序方式 */}
                                 <SortPopup sortOrder={sortOrder} setSortOrder={setSortOrder} />
+                                {profile &&
+                                    <Link href={listState === 'draft' ? '/?type=normal' : '/?type=draft'} className={`text-sm text-neutral-500 font-normal ${listState === 'draft' ? "text-theme" : ""}`}>
+                                        {t('draft_bin')}
+                                    </Link>
+                                }
                                 {profile?.permission &&
-                                    <>
-                                        <Link href={listState === 'draft' ? '/?type=normal' : '/?type=draft'} className={`text-sm text-neutral-500 font-normal ${listState === 'draft' ? "text-theme" : ""}`}>
-                                            {t('draft_bin')}
-                                        </Link>
-                                        <Link href={listState === 'unlisted' ? '/?type=normal' : '/?type=unlisted'} className={`text-sm text-neutral-500 font-normal ${listState === 'unlisted' ? "text-theme" : ""}`}>
-                                            {t('unlisted')}
-                                        </Link>
-                                    </>
+                                    <Link href={listState === 'unlisted' ? '/?type=normal' : '/?type=unlisted'} className={`text-sm text-neutral-500 font-normal ${listState === 'unlisted' ? "text-theme" : ""}`}>
+                                        {t('unlisted')}
+                                    </Link>
                                 }
                             </div>
                         </div>

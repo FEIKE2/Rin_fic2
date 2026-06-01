@@ -485,11 +485,20 @@ function CommentInput({
   function errorHumanize(error: string) {
     if (error === "Unauthorized") return t("login.required");
     else if (error === "Content is required") return t("comment.empty");
+    else if (error === "Comment too long") return t("comment.too_long");
     else if (error === "Guest name is required") return t("comment.guest_name_required");
     else if (error === "Parent comment has been deleted") return t("comment.parent_deleted");
     return error;
   }
   function submit() {
+    if (content.trim().length === 0) {
+      setError(t("comment.empty"));
+      return;
+    }
+    if (content.length > 150) {
+      setError(t("comment.too_long"));
+      return;
+    }
     const baseBody = {
       content,
       ...(parentId ? { parentId } : {}),
@@ -551,9 +560,11 @@ function CommentInput({
           id={parentId ? `comment-reply-${parentId}` : "comment"}
           placeholder={t("comment.placeholder.title")}
           className="bg-w w-full h-24 rounded-lg"
+          maxLength={150}
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
+        <p className="mt-1 w-full text-right text-xs text-gray-400">{content.length}/150</p>
         <div className="mt-4 flex gap-2">
           {onCancel && (
             <button
@@ -589,9 +600,11 @@ function CommentInput({
           id={parentId ? `comment-reply-${parentId}` : "comment"}
           placeholder={t("comment.placeholder.title")}
           className="bg-w w-full h-24 rounded-lg"
+          maxLength={150}
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
+        <p className="mt-1 w-full text-right text-xs text-gray-400">{content.length}/150</p>
         <div className="mt-4 flex gap-2">
           {onCancel && (
             <button
@@ -609,12 +622,13 @@ function CommentInput({
           </button>
         </div>
       </>) : (
-        <div className="flex flex-row w-full items-center justify-center space-x-2 py-12">
+        <div className="flex flex-col w-full items-center justify-center space-y-3 py-12">
+          <p className="t-secondary text-sm">{t("comment.login_required_prompt")}</p>
           <button
-            className="mt-2 bg-theme text-white px-4 py-2 rounded-full"
+            className="bg-theme text-white px-4 py-2 rounded-full"
             onClick={() => setLocation('/login')}
           >
-            {t("login.required")}
+            {t("login.title")}
           </button>
         </div>
       )}
@@ -698,6 +712,9 @@ function CommentItem({
   const { showAlert, AlertUI } = useAlert();
   const { t } = useTranslation();
   const profile = useContext(ProfileContext);
+  const config = useContext(ClientConfigContext);
+  const rawGuest = config.get('comment.guest.enabled');
+  const guestEnabled = rawGuest !== false && rawGuest !== 'false';
   const [isReplying, setIsReplying] = useState(false);
   const [likes, setLikes] = useState(comment.likes ?? 0);
   const [liked, setLiked] = useState(comment.liked ?? false);
@@ -787,7 +804,7 @@ function CommentItem({
               <span>{likes}</span>
             </span>
           ) : null}
-          {!isDeleted && (
+          {!isDeleted && (profile || guestEnabled) && (
             <button
               onClick={() => setIsReplying(true)}
               className="px-2 py bg-secondary rounded-full text-sm t-secondary hover:text-theme"

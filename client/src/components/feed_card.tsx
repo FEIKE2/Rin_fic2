@@ -2,12 +2,13 @@ import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { timeago } from "../utils/timeago";
 import { HashTag } from "./hashtag";
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { drawBlurhashToCanvas } from "../utils/blurhash";
 import { parseImageUrlMetadata } from "../utils/image-upload";
 import { useImageLoadState } from "../utils/use-image-load-state";
 import { type FeedCardVariant, normalizeFeedCardVariant } from "./feed-card-options";
 import { useSiteConfig } from "../hooks/useSiteConfig";
+import { ProfileContext } from "../state/profile";
 
 function FeedCardImage({ src }: { src: string }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,18 +57,28 @@ export type FeedCardProps = {
     updatedAt: Date;
     preview?: boolean;
     variant?: FeedCardVariant;
+    loginRequired?: number;
     user?: { username?: string };
 };
 
-export function FeedCard({ id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, preview = false, variant, user }: FeedCardProps) {
+export function FeedCard({ id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, preview = false, variant, loginRequired, user }: FeedCardProps) {
     const { t } = useTranslation();
     const siteConfig = useSiteConfig();
+    const profile = useContext(ProfileContext);
     const activeVariant = normalizeFeedCardVariant(variant ?? siteConfig.feedCardVariant);
+    const [showLoginTip, setShowLoginTip] = useState(false);
+    // 游客面对"仅登录可见"的帖子：隐藏图片与正文/简介
+    const locked = loginRequired === 1 && !profile && !preview;
+
+    const lockedNote = (
+        <p className="mt-2 text-sm italic text-neutral-500 dark:text-neutral-400">{t("visible.login_only")}</p>
+    );
 
     const body = activeVariant === "minimal" ? (
         // 极简风：无图片和正文，只显示标题、最后更新日期、发布用户
         <div className="my-2 inline-block w-full break-inside-avoid rounded-2xl bg-w p-5 duration-300 bg-button">
             <h1 className="text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden">{title}</h1>
+            {locked && lockedNote}
             <p className="mt-3 text-xs text-gray-400 space-x-2">
                 <span title={new Date(updatedAt).toLocaleString()}>{t('feed_card.updated$time', { time: timeago(updatedAt) })}</span>
                 {user?.username ? <span>· {user.username}</span> : null}
@@ -81,7 +92,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
     ) : (
         // 默认风：不显示正文内容，只显示图片（如有）、标题、时间、简介（如有）、用户名、标签
         <div className="my-2 inline-block w-full break-inside-avoid rounded-2xl bg-w p-6 duration-300 bg-button">
-            {avatar ? <FeedCardImage src={avatar} /> : null}
+            {!locked && avatar ? <FeedCardImage src={avatar} /> : null}
             <h1 className="text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden">{title}</h1>
             <p className="space-x-2 text-gray-400 text-sm">
                 <span title={new Date(createdAt).toLocaleString()}>
@@ -99,7 +110,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
                 {listed === 0 && <span>{t("unlisted")}</span>}
                 {top === 1 && <span className="text-theme">{t('article.top.title')}</span>}
             </p>
-            {summary ? <p className="line-clamp-4 text-pretty overflow-hidden dark:text-neutral-500">{summary}</p> : null}
+            {locked ? lockedNote : (summary ? <p className="line-clamp-4 text-pretty overflow-hidden dark:text-neutral-500">{summary}</p> : null)}
             {hashtags.length > 0 && (
                 <div className="flex flex-row flex-wrap justify-start gap-2 mt-2 gap-x-2">
                     {hashtags.map(({ name }, index) => <HashTag key={index} name={name} />)}
@@ -108,5 +119,39 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
         </div>
     );
 
-    return preview ? body : <Link href={`/feed/${id}`} target="_blank" className="block w-full">{body}</Link>;
+    if (preview) return body;
+
+    if (locked) {
+        return (
+            <>
+                <button type="button" onClick={() => setShowLoginTip(true)} className="block w-full text-left">
+                    {body}
+                </button>
+                {showLoginTip && <LoginTipModal onClose={() => setShowLoginTip(false)} />}
+            </>
+        );
+    }
+
+    return <Link href={`/feed/${id}`} target="_blank" className="block w-full">{body}</Link>;
+}
+
+function LoginTipModal({ onClose }: { onClose: () => void }) {
+    const { t } = useTranslation();
+    return (
+        <div
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
+            onClick={onClose}
+        >
+            <div
+                className="flex flex-col items-center gap-3 rounded-2xl bg-w px-8 py-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <i className="ri-lock-2-line text-4xl text-theme" />
+                <p className="t-primary text-base font-medium">{t("visible.login_to_view")}</p>
+                <Link href="/login" className="mt-1 rounded-full bg-theme px-5 py-2 text-sm text-white">
+                    {t("login.title")}
+                </Link>
+            </div>
+        </div>
+    );
 }
