@@ -48,6 +48,23 @@ describe('API Client', () => {
       )
     })
 
+    it('should include feed sort parameter', async () => {
+      const mockResponse = { size: 0, data: [], hasNext: false }
+
+      mockFetch.mockResolvedValueOnce(createMockResponse({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        json: async () => mockResponse,
+      }))
+
+      await api.feed.list({ sort: 'popular' })
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/feed?sort=popular'),
+        expect.any(Object)
+      )
+    })
+
     it('should handle feed list error', async () => {
       mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: false,

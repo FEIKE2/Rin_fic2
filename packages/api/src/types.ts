@@ -55,6 +55,9 @@ export interface FeedListResponse {
     avatar: string | null;
     createdAt: string;
     updatedAt: string;
+    hotScore?: number;
+    hotContentScore?: number;
+    hotDynamicScore?: number;
     pv: number;
     uv: number;
   }>;

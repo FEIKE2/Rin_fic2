@@ -5,6 +5,7 @@ import { commentLikes, comments, feeds, users } from "../db/schema";
 import { profileAsync } from "../core/server-timing";
 import { notify } from "../utils/webhook";
 import { resolveWebhookConfig } from "./config-helpers";
+import { adjustFeedDynamicHotScore, getHotConfig } from "./hot-score";
 
 export function CommentService(): Hono {
     const app = new Hono();
@@ -159,6 +160,10 @@ export function CommentService(): Hono {
                 userId: uid,
                 content
             });
+            const hotConfig = await profileAsync(c, 'comment_create_hot_config', () => getHotConfig(serverConfig));
+            await profileAsync(c, 'comment_create_hot_score', () =>
+                adjustFeedDynamicHotScore(db, feedId, parentId ? hotConfig.replyWeight : hotConfig.commentWeight)
+            );
 
             const { webhookUrl, webhookMethod, webhookContentType, webhookHeaders, webhookBodyTemplate } =
                 await profileAsync(c, 'comment_create_webhook_config', () => resolveWebhookConfig(serverConfig, env));
@@ -203,6 +208,10 @@ export function CommentService(): Hono {
             guestContact: guestContact?.trim() || "",
             approved: 1,
         });
+        const hotConfig = await profileAsync(c, 'comment_create_hot_config', () => getHotConfig(serverConfig));
+        await profileAsync(c, 'comment_create_hot_score', () =>
+            adjustFeedDynamicHotScore(db, feedId, parentId ? hotConfig.replyWeight : hotConfig.commentWeight)
+        );
 
         const { webhookUrl, webhookMethod, webhookContentType, webhookHeaders, webhookBodyTemplate } =
             await profileAsync(c, 'comment_create_webhook_config', () => resolveWebhookConfig(serverConfig, env));
@@ -273,6 +282,7 @@ export function CommentService(): Hono {
 
     app.delete('/:id', async (c: AppContext) => {
         const db = c.get('db');
+        const serverConfig = c.get('serverConfig');
         const uid = c.get('uid');
         const admin = c.get('admin');
         
@@ -294,6 +304,12 @@ export function CommentService(): Hono {
                 deletedAt: new Date(),
                 updatedAt: new Date(),
             }).where(eq(comments.id, id_num));
+            if (!comment.deletedAt) {
+                const hotConfig = await profileAsync(c, 'comment_delete_hot_config', () => getHotConfig(serverConfig));
+                await profileAsync(c, 'comment_delete_hot_score', () =>
+                    adjustFeedDynamicHotScore(db, comment.feedId, comment.parentId ? -hotConfig.replyWeight : -hotConfig.commentWeight)
+                );
+            }
             return c.text('OK');
         }
         
@@ -306,6 +322,12 @@ export function CommentService(): Hono {
             deletedAt: new Date(),
             updatedAt: new Date(),
         }).where(eq(comments.id, id_num));
+        if (!comment.deletedAt) {
+            const hotConfig = await profileAsync(c, 'comment_delete_hot_config', () => getHotConfig(serverConfig));
+            await profileAsync(c, 'comment_delete_hot_score', () =>
+                adjustFeedDynamicHotScore(db, comment.feedId, comment.parentId ? -hotConfig.replyWeight : -hotConfig.commentWeight)
+            );
+        }
         return c.text('OK');
     });
 

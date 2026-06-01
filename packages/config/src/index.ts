@@ -30,6 +30,16 @@ export const SERVER_CONFIG_DEFAULTS = new Map(
     "webhook.content_type": "application/json",
     "webhook.headers": "{}",
     "webhook.body_template": "{\"content\":\"{{message}}\"}",
+    "hot.word_weight_per_1000": 50,
+    "hot.word_score_max": 150,
+    "hot.image_weight": 20,
+    "hot.image_score_max": 60,
+    "hot.unique_visit_weight": 1.5,
+    "hot.like_weight": 5,
+    "hot.bookmark_weight": 10,
+    "hot.comment_weight": 20,
+    "hot.reply_weight": 8,
+    "hot.daily_decay": 0.9057236643,
   }),
 );
 

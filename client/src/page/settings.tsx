@@ -598,6 +598,32 @@ export function Settings() {
             }}
           />
 
+          <ItemTitle title={t("settings.hot.title")} />
+          {[
+            { id: "word_weight_per_1000", key: "hot.word_weight_per_1000" },
+            { id: "word_score_max", key: "hot.word_score_max" },
+            { id: "image_weight", key: "hot.image_weight" },
+            { id: "image_score_max", key: "hot.image_score_max" },
+            { id: "unique_visit_weight", key: "hot.unique_visit_weight" },
+            { id: "like_weight", key: "hot.like_weight" },
+            { id: "bookmark_weight", key: "hot.bookmark_weight" },
+            { id: "comment_weight", key: "hot.comment_weight" },
+            { id: "reply_weight", key: "hot.reply_weight" },
+            { id: "daily_decay", key: "hot.daily_decay" },
+          ].map(({ id, key }) => (
+            <ItemInput
+              key={key}
+              title={t(`settings.hot.fields.${id}.title`)}
+              description={t(`settings.hot.fields.${id}.desc`)}
+              configKeyTitle={key}
+              value={String(draft.serverConfig[key] ?? "")}
+              placeholder={String(serverConfig.default(key) ?? "")}
+              onChange={(value) => {
+                setConfigValue("server", key, value);
+              }}
+            />
+          ))}
+
           <ItemTitle title={t("settings.maintenance.title")} />
           <ItemSwitch
             title={t("settings.cache.enabled.title")}

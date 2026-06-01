@@ -8,6 +8,7 @@ import { extractImageWithMetadata } from "../utils/image";
 import { syncFeedAISummaryQueueState } from "./feed-ai-summary";
 import { bindTagToPost } from "./tag";
 import { clearFeedCache } from "./clear-feed-cache";
+import { adjustFeedDynamicHotScore, getHotConfig, updateFeedContentHotScore } from "./hot-score";
 export { clearFeedCache } from "./clear-feed-cache";
 
 // Lazy-loaded modules for WordPress import
@@ -42,6 +43,7 @@ export function FeedService(): Hono<{
         const page = c.req.query('page');
         const limit = c.req.query('limit');
         const type = c.req.query('type');
+        const sort = c.req.query('sort') === 'popular' ? 'popular' : 'latest';
 
         if ((type === 'draft' || type === 'unlisted') && !admin) {
             return c.text('Permission denied', 403);
@@ -49,10 +51,10 @@ export function FeedService(): Hono<{
 
         const page_num = (page ? parseInt(page) > 0 ? parseInt(page) : 1 : 1) - 1;
         const limit_num = limit ? parseInt(limit) > 50 ? 50 : parseInt(limit) : 20;
-        const cacheKey = `feeds_${type}_${page_num}_${limit_num}`;
+        const cacheKey = `feeds_${type}_${sort}_${page_num}_${limit_num}`;
         const cached = await profileAsync(c, 'feed_list_cache_get', () => cache.get(cacheKey));
 
-        if (cached) {
+        if (cached && sort !== 'popular') {
             return c.json(cached);
         }
 
@@ -80,7 +82,9 @@ export function FeedService(): Hono<{
                 },
                 user: { columns: { id: true, username: true, avatar: true } }
             },
-            orderBy: [desc(feeds.top), desc(feeds.createdAt), desc(feeds.updatedAt)],
+            orderBy: sort === 'popular'
+                ? [desc(feeds.top), desc(feeds.hotScore), desc(feeds.createdAt)]
+                : [desc(feeds.top), desc(feeds.createdAt), desc(feeds.updatedAt)],
             offset: page_num * limit_num,
             limit: limit_num + 1,
         }))).map(({ content, hashtags, summary, ...other }: any) => {
@@ -101,7 +105,7 @@ export function FeedService(): Hono<{
 
         const data = { size: size[0].count, data: feed_list, hasNext };
 
-        if (type === undefined || type === 'normal' || type === '') {
+        if (sort !== 'popular' && (type === undefined || type === 'normal' || type === '')) {
             await profileAsync(c, 'feed_list_cache_set', () => cache.set(cacheKey, data));
         }
 
@@ -172,6 +176,12 @@ export function FeedService(): Hono<{
             updatedAt: date
         }).returning({ insertedId: feeds.id }));
 
+        if (result.length === 0) {
+            return c.text('Failed to insert', 500);
+        }
+
+        await profileAsync(c, 'feed_create_hot_score', () => updateFeedContentHotScore(db, serverConfig, result[0].insertedId, content));
+
         await profileAsync(c, 'feed_create_tags', () => bindTagToPost(db, result[0].insertedId, tags));
         await profileAsync(c, 'feed_create_ai_queue', () => syncFeedAISummaryQueueState(db, serverConfig, env, result[0].insertedId, {
             draft: Boolean(draft),
@@ -180,11 +190,7 @@ export function FeedService(): Hono<{
         }));
         await profileAsync(c, 'feed_create_cache_invalidate', () => cache.deletePrefix('feeds_'));
 
-        if (result.length === 0) {
-            return c.text('Failed to insert', 500);
-        } else {
-            return c.json(result[0]);
-        }
+        return c.json(result[0]);
     });
 
     // GET /feed/:id
@@ -192,6 +198,7 @@ export function FeedService(): Hono<{
         const db = c.get('db');
         const cache = c.get('cache');
         const clientConfig = c.get('clientConfig');
+        const serverConfig = c.get('serverConfig');
         const admin = c.get('admin');
         const uid = c.get('uid');
         const id = c.req.param('id');
@@ -236,21 +243,30 @@ export function FeedService(): Hono<{
                 where: eq(visitStats.feedId, feed.id)
             }));
 
+            const hotConfig = await profileAsync(c, 'feed_detail_hot_config', () => getHotConfig(serverConfig));
+
             if (!stats) {
+                const hll = new HyperLogLog();
+                hll.add(visitorKey);
                 // Create new stats record
                 await profileAsync(c, 'feed_detail_stats_insert', () => db.insert(visitStats).values({
                     feedId: feed.id,
                     pv: 1,
-                    hllData: new HyperLogLog().serialize()
+                    hllData: hll.serialize()
                 }));
+                await profileAsync(c, 'feed_detail_hot_unique_visit', () =>
+                    adjustFeedDynamicHotScore(db, feed.id, hotConfig.uniqueVisitWeight)
+                );
                 pv = 1;
                 uv = 1;
             } else {
                 // Update existing stats
                 const hll = new HyperLogLog(stats.hllData);
+                const previousUv = Math.round(hll.count());
                 hll.add(visitorKey);
                 const newHllData = hll.serialize();
                 const newPv = stats.pv + 1;
+                const nextUv = Math.round(hll.count());
 
                 await profileAsync(c, 'feed_detail_stats_update', () => db.update(visitStats)
                     .set({
@@ -261,7 +277,13 @@ export function FeedService(): Hono<{
                     .where(eq(visitStats.feedId, feed.id)));
 
                 pv = newPv;
-                uv = Math.round(hll.count());
+                uv = nextUv;
+                const uvDelta = Math.max(0, nextUv - previousUv);
+                if (uvDelta > 0) {
+                    await profileAsync(c, 'feed_detail_hot_unique_visit', () =>
+                        adjustFeedDynamicHotScore(db, feed.id, uvDelta * hotConfig.uniqueVisitWeight)
+                    );
+                }
             }
 
             // Keep recording to visits table for backup/history
@@ -423,6 +445,10 @@ export function FeedService(): Hono<{
             createdAt: createdAt ? new Date(createdAt) : undefined,
             updatedAt: updateTime
         }).where(eq(feeds.id, id_num)));
+
+        if (contentChanged && content) {
+            await profileAsync(c, 'feed_update_hot_score', () => updateFeedContentHotScore(db, serverConfig, id_num, content));
+        }
 
         if (tags) {
             await profileAsync(c, 'feed_update_tags', () => bindTagToPost(db, id_num, tags));

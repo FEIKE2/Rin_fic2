@@ -4,6 +4,7 @@ import type { AppContext } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
 import { feedBookmarks, feedLikes, feeds } from "../db/schema";
 import { ForbiddenError, NotFoundError } from "../errors";
+import { adjustFeedDynamicHotScore, getHotConfig } from "./hot-score";
 
 export function InteractionService(): Hono {
     const app = new Hono();
@@ -37,9 +38,11 @@ export function InteractionService(): Hono {
     // POST /interaction/:feedId/like - Toggle like
     app.post('/:feedId/like', async (c: AppContext) => {
         const db = c.get('db');
+        const serverConfig = c.get('serverConfig');
         const uid = c.get('uid');
         if (!uid) throw new ForbiddenError('Authentication required');
         const feedId = parseInt(c.req.param('feedId'));
+        const config = await profileAsync(c, 'interaction_hot_config', () => getHotConfig(serverConfig));
 
         const existing = await profileAsync(c, 'interaction_like_existing', () =>
             db.query.feedLikes.findFirst({ where: and(eq(feedLikes.feedId, feedId), eq(feedLikes.userId, uid)) })
@@ -49,10 +52,16 @@ export function InteractionService(): Hono {
             await profileAsync(c, 'interaction_like_delete', () =>
                 db.delete(feedLikes).where(and(eq(feedLikes.feedId, feedId), eq(feedLikes.userId, uid)))
             );
+            await profileAsync(c, 'interaction_like_hot_decrement', () =>
+                adjustFeedDynamicHotScore(db, feedId, -config.likeWeight)
+            );
             return c.json({ liked: false });
         } else {
             await profileAsync(c, 'interaction_like_insert', () =>
                 db.insert(feedLikes).values({ feedId, userId: uid })
+            );
+            await profileAsync(c, 'interaction_like_hot_increment', () =>
+                adjustFeedDynamicHotScore(db, feedId, config.likeWeight)
             );
             return c.json({ liked: true });
         }
@@ -61,9 +70,11 @@ export function InteractionService(): Hono {
     // POST /interaction/:feedId/bookmark - Toggle bookmark
     app.post('/:feedId/bookmark', async (c: AppContext) => {
         const db = c.get('db');
+        const serverConfig = c.get('serverConfig');
         const uid = c.get('uid');
         if (!uid) throw new ForbiddenError('Authentication required');
         const feedId = parseInt(c.req.param('feedId'));
+        const config = await profileAsync(c, 'interaction_hot_config', () => getHotConfig(serverConfig));
 
         const existing = await profileAsync(c, 'interaction_bookmark_existing', () =>
             db.query.feedBookmarks.findFirst({ where: and(eq(feedBookmarks.feedId, feedId), eq(feedBookmarks.userId, uid)) })
@@ -73,10 +84,16 @@ export function InteractionService(): Hono {
             await profileAsync(c, 'interaction_bookmark_delete', () =>
                 db.delete(feedBookmarks).where(and(eq(feedBookmarks.feedId, feedId), eq(feedBookmarks.userId, uid)))
             );
+            await profileAsync(c, 'interaction_bookmark_hot_decrement', () =>
+                adjustFeedDynamicHotScore(db, feedId, -config.bookmarkWeight)
+            );
             return c.json({ bookmarked: false });
         } else {
             await profileAsync(c, 'interaction_bookmark_insert', () =>
                 db.insert(feedBookmarks).values({ feedId, userId: uid })
+            );
+            await profileAsync(c, 'interaction_bookmark_hot_increment', () =>
+                adjustFeedDynamicHotScore(db, feedId, config.bookmarkWeight)
             );
             return c.json({ bookmarked: true });
         }

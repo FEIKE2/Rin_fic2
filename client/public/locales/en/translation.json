@@ -360,6 +360,51 @@
       },
       "title": "Friend Link Settings"
     },
+    "hot": {
+      "title": "Popular Sorting",
+      "fields": {
+        "word_weight_per_1000": {
+          "title": "Per-1000-character score",
+          "desc": "Hot score added for each full 1000 characters in the post body"
+        },
+        "word_score_max": {
+          "title": "Character score cap",
+          "desc": "Maximum initial hot score contributed by body length"
+        },
+        "image_weight": {
+          "title": "Per-image score",
+          "desc": "Hot score added for each image in the post body"
+        },
+        "image_score_max": {
+          "title": "Image score cap",
+          "desc": "Maximum initial hot score contributed by images"
+        },
+        "unique_visit_weight": {
+          "title": "Unique visit weight",
+          "desc": "Interactive hot score added when estimated UV increases"
+        },
+        "like_weight": {
+          "title": "Like weight",
+          "desc": "Interactive hot score added or removed when a post is liked or unliked"
+        },
+        "bookmark_weight": {
+          "title": "Bookmark weight",
+          "desc": "Interactive hot score added or removed when a post is bookmarked or unbookmarked"
+        },
+        "comment_weight": {
+          "title": "Main comment weight",
+          "desc": "Interactive hot score added or removed when a top-level comment is created or deleted"
+        },
+        "reply_weight": {
+          "title": "Reply weight",
+          "desc": "Interactive hot score added or removed when a nested reply is created or deleted"
+        },
+        "daily_decay": {
+          "title": "Daily decay factor",
+          "desc": "UTC daily decay multiplier applied to the interactive hot score"
+        }
+      }
+    },
     "ai_summary": {
       "title": "AI Summary Settings",
       "enable": {

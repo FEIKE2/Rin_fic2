@@ -360,6 +360,51 @@
       },
       "title": "友链设置"
     },
+    "hot": {
+      "title": "热门排序",
+      "fields": {
+        "word_weight_per_1000": {
+          "title": "每千字热门值",
+          "desc": "正文每满一千字增加的热门值"
+        },
+        "word_score_max": {
+          "title": "字数热门值上限",
+          "desc": "正文长度可贡献的最高热门初始值"
+        },
+        "image_weight": {
+          "title": "单张图片热门值",
+          "desc": "正文每张图片增加的热门值"
+        },
+        "image_score_max": {
+          "title": "图片热门值上限",
+          "desc": "正文图片可贡献的最高热门初始值"
+        },
+        "unique_visit_weight": {
+          "title": "不重复访问权重",
+          "desc": "UV 估算每增加一次时增加的互动热门值"
+        },
+        "like_weight": {
+          "title": "点赞权重",
+          "desc": "帖子每次点赞或取消点赞时增减的互动热门值"
+        },
+        "bookmark_weight": {
+          "title": "收藏权重",
+          "desc": "帖子每次收藏或取消收藏时增减的互动热门值"
+        },
+        "comment_weight": {
+          "title": "主评论权重",
+          "desc": "每条主评论创建或删除时增减的互动热门值"
+        },
+        "reply_weight": {
+          "title": "回复权重",
+          "desc": "每条楼中楼回复创建或删除时增减的互动热门值"
+        },
+        "daily_decay": {
+          "title": "每日衰减系数",
+          "desc": "UTC 每日任务对互动热门值应用的衰减倍数"
+        }
+      }
+    },
     "ai_summary": {
       "title": "AI 总结设置",
       "enable": {

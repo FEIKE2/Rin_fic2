@@ -360,6 +360,51 @@
       },
       "title": "友情連結設定"
     },
+    "hot": {
+      "title": "熱門排序",
+      "fields": {
+        "word_weight_per_1000": {
+          "title": "每千字熱門值",
+          "desc": "正文每滿一千字增加的熱門值"
+        },
+        "word_score_max": {
+          "title": "字數熱門值上限",
+          "desc": "正文長度可貢獻的最高熱門初始值"
+        },
+        "image_weight": {
+          "title": "單張圖片熱門值",
+          "desc": "正文每張圖片增加的熱門值"
+        },
+        "image_score_max": {
+          "title": "圖片熱門值上限",
+          "desc": "正文圖片可貢獻的最高熱門初始值"
+        },
+        "unique_visit_weight": {
+          "title": "不重複訪問權重",
+          "desc": "UV 估算每增加一次時增加的互動熱門值"
+        },
+        "like_weight": {
+          "title": "點讚權重",
+          "desc": "帖文每次點讚或取消點讚時增減的互動熱門值"
+        },
+        "bookmark_weight": {
+          "title": "收藏權重",
+          "desc": "帖文每次收藏或取消收藏時增減的互動熱門值"
+        },
+        "comment_weight": {
+          "title": "主評論權重",
+          "desc": "每條主評論建立或刪除時增減的互動熱門值"
+        },
+        "reply_weight": {
+          "title": "回覆權重",
+          "desc": "每條樓中樓回覆建立或刪除時增減的互動熱門值"
+        },
+        "daily_decay": {
+          "title": "每日衰減係數",
+          "desc": "UTC 每日任務對互動熱門值套用的衰減倍數"
+        }
+      }
+    },
     "ai_summary": {
       "title": "AI 總結設定",
       "enable": {

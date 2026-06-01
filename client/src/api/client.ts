@@ -279,11 +279,12 @@ class FeedAPI {
   constructor(private http: HttpClient) {}
 
   // GET /api/feed
-  async list(params?: { page?: number; limit?: number; type?: 'draft' | 'unlisted' | 'normal' }): Promise<ApiResponse<FeedListResponse>> {
+  async list(params?: { page?: number; limit?: number; type?: 'draft' | 'unlisted' | 'normal'; sort?: 'latest' | 'popular' }): Promise<ApiResponse<FeedListResponse>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set("page", params.page.toString());
     if (params?.limit) searchParams.set("limit", params.limit.toString());
     if (params?.type) searchParams.set("type", params.type);
+    if (params?.sort) searchParams.set("sort", params.sort);
     
     const query = searchParams.toString();
     return this.http.get<FeedListResponse>(`/api/feed${query ? `?${query}` : ""}`);

@@ -15,7 +15,9 @@ export async function handleScheduled(
 
   const { friendCrontab } = await import("../services/friends");
   const { rssCrontab } = await import("../services/rss");
+  const { decayFeedHotScores } = await import("../services/hot-score");
 
+  await decayFeedHotScores(db, serverConfig);
   await friendCrontab(env, ctx, db, cache, serverConfig, clientConfig);
   await rssCrontab(env, db);
 }

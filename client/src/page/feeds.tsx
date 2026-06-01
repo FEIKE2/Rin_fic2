@@ -58,7 +58,8 @@ export function FeedsPage() {
         client.feed.list({
             page: page,
             limit: limit,
-            type: type
+            type: type,
+            sort: sortOrder,
         }).then(({ data }) => {
             if (data) {
                 setFeeds(prev => ({ ...prev, [type]: data }))
@@ -67,19 +68,16 @@ export function FeedsPage() {
         })
     }
     useEffect(() => {
-        const key = `${query.get("page")} ${query.get("type")} ${limit}`
+        const key = `${query.get("page")} ${query.get("type")} ${limit} ${sortOrder}`
         if (ref.current == key) return
         const type = query.get("type") as FeedType || 'normal'
         if (type !== listState) _setListState(type)
         setStatus('loading')
         fetchFeeds(type)
         ref.current = key
-    }, [limit, query.get("page"), query.get("type")])
+    }, [limit, query.get("page"), query.get("type"), sortOrder])
 
-    const sortedData = [...(feeds[listState].data)].sort((a, b) => {
-        if (sortOrder === "popular") return ((b.pv ?? 0) - (a.pv ?? 0));
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    const sortedData = feeds[listState].data;
 
     return (
         <>

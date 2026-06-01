@@ -9,6 +9,7 @@ export const feedListSchema = t.Object({
   page: t.Number({ optional: true }),
   limit: t.Number({ optional: true }),
   type: t.String({ optional: true }),
+  sort: t.String({ optional: true }),
 });
 
 export const feedCreateSchema = t.Object({

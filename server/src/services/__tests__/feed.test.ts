@@ -135,6 +135,22 @@ describe('FeedService', () => {
             const data = await res.json() as any;
             expect(data.size).toBe(1);
         });
+
+        it('should order popular feeds by top and hot score', async () => {
+            sqlite.exec(`
+                INSERT INTO feeds (id, title, content, uid, draft, listed, hot_score, hot_content_score, hot_dynamic_score, created_at) VALUES
+                    (10, 'Low hot', 'Content', 1, 0, 1, 10, 0, 10, 100),
+                    (11, 'High hot', 'Content', 1, 0, 1, 50, 0, 50, 90),
+                    (12, 'Pinned', 'Content', 1, 0, 1, 1, 0, 1, 80)
+            `);
+            sqlite.exec(`UPDATE feeds SET top = 1 WHERE id = 12`);
+
+            const res = await app.request('/?sort=popular&page=1&limit=10', { method: 'GET' }, env);
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            expect(data.data.map((item: any) => item.id)).toEqual([12, 11, 10]);
+        });
     });
 
     describe('GET /:id - Get single feed', () => {
@@ -264,10 +280,35 @@ describe('FeedService', () => {
             expect(res.status).toBe(200);
             const data = await res.json() as any;
             expect(data.insertedId).toBeDefined();
+            const row = sqlite.prepare(`SELECT hot_content_score, hot_score FROM feeds WHERE id = ?`).get(data.insertedId) as any;
+            expect(row.hot_content_score).toBe(0);
+            expect(row.hot_score).toBe(0);
         });
 
-        it('should require admin permission', async () => {
-            // Create app without admin permission
+        it('should initialize content hot score when creating a rich feed', async () => {
+            const res = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Rich hot feed',
+                    content: `${'字'.repeat(2500)}\n![one](one.png)\n<img src="two.png" />`,
+                    listed: true,
+                    draft: false,
+                    tags: [],
+                }),
+            }, env);
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            const row = sqlite.prepare(`SELECT hot_content_score, hot_score FROM feeds WHERE id = ?`).get(data.insertedId) as any;
+            expect(row.hot_content_score).toBe(140);
+            expect(row.hot_score).toBe(140);
+        });
+
+        it('should require authentication', async () => {
             const res = await app.request('/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -280,7 +321,7 @@ describe('FeedService', () => {
                 }),
             }, env);
 
-            expect(res.status).toBe(403);
+            expect(res.status).toBe(401);
         });
 
         it('should require title', async () => {

@@ -50,6 +50,9 @@ export function createMockDB() {
             listed INTEGER DEFAULT 1 NOT NULL,
             draft INTEGER DEFAULT 1 NOT NULL,
             top INTEGER DEFAULT 0 NOT NULL,
+            hot_score REAL DEFAULT 0 NOT NULL,
+            hot_content_score REAL DEFAULT 0 NOT NULL,
+            hot_dynamic_score REAL DEFAULT 0 NOT NULL,
             uid INTEGER NOT NULL,
             created_at INTEGER DEFAULT (unixepoch()),
             updated_at INTEGER DEFAULT (unixepoch()),
@@ -136,6 +139,19 @@ export function createMockDB() {
             FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             UNIQUE(comment_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS feed_edit_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feed_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            title TEXT,
+            content TEXT NOT NULL,
+            summary TEXT DEFAULT '',
+            edit_reason TEXT DEFAULT '',
+            created_at INTEGER DEFAULT (unixepoch()),
+            FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
         -- Hashtags table (note: named "hashtags" not "tags")

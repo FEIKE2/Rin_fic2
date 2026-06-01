@@ -64,6 +64,7 @@ describe('InteractionService', () => {
 
         expect(likeRes.status).toBe(200);
         expect(await likeRes.json() as any).toEqual({ liked: true });
+        expect((sqlite.prepare(`SELECT hot_dynamic_score, hot_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(5);
 
         const unlikeRes = await app.request('/1/like', {
             method: 'POST',
@@ -72,6 +73,7 @@ describe('InteractionService', () => {
 
         expect(unlikeRes.status).toBe(200);
         expect(await unlikeRes.json() as any).toEqual({ liked: false });
+        expect((sqlite.prepare(`SELECT hot_dynamic_score, hot_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(0);
     });
 
     it('should toggle bookmark for authenticated users', async () => {
@@ -82,6 +84,7 @@ describe('InteractionService', () => {
 
         expect(bookmarkRes.status).toBe(200);
         expect(await bookmarkRes.json() as any).toEqual({ bookmarked: true });
+        expect((sqlite.prepare(`SELECT hot_dynamic_score, hot_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(10);
 
         const unbookmarkRes = await app.request('/1/bookmark', {
             method: 'POST',
@@ -90,6 +93,7 @@ describe('InteractionService', () => {
 
         expect(unbookmarkRes.status).toBe(200);
         expect(await unbookmarkRes.json() as any).toEqual({ bookmarked: false });
+        expect((sqlite.prepare(`SELECT hot_dynamic_score, hot_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(0);
     });
 
     it('should require authentication to change interactions', async () => {

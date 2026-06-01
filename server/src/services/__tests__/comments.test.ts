@@ -120,6 +120,7 @@ describe('CommentService', () => {
             // Verify comment was created
             const comments = sqlite.prepare(`SELECT * FROM comments WHERE feed_id = 1`).all();
             expect(comments.length).toBe(3);
+            expect((sqlite.prepare(`SELECT hot_dynamic_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(20);
         });
 
         it('should create guest comment with guestName', async () => {
@@ -194,6 +195,7 @@ describe('CommentService', () => {
             expect(parent.replies[0].parentId).toBe(1);
             expect(parent.replies[0].replyTo.id).toBe(1);
             expect(parent.replies[0].replyTo.content).toBe('Comment 1 on feed 1');
+            expect((sqlite.prepare(`SELECT hot_dynamic_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(8);
         });
 
         it('should flatten replies to replies under the top-level parent', async () => {
@@ -390,6 +392,8 @@ describe('CommentService', () => {
 
     describe('DELETE /:id - Delete comment', () => {
         it('should allow user to delete their own comment', async () => {
+            sqlite.exec(`UPDATE feeds SET hot_dynamic_score = 20, hot_score = 20 WHERE id = 1`);
+
             const res = await app.request('/1', {
                 method: 'DELETE',
                 headers: { 'Authorization': 'Bearer mock_token_2' },
@@ -401,6 +405,7 @@ describe('CommentService', () => {
             const dbResult = sqlite.prepare(`SELECT content, deleted_at FROM comments WHERE id = 1`).get() as any;
             expect(dbResult.content).toBe('');
             expect(dbResult.deleted_at).toBeNumber();
+            expect((sqlite.prepare(`SELECT hot_dynamic_score FROM feeds WHERE id = 1`).get() as any).hot_dynamic_score).toBe(0);
         });
 
         it('should allow admin to delete any comment', async () => {
