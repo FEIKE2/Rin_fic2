@@ -368,6 +368,7 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
 
 function LikeBookmarkBar({ feedId }: { feedId: number }) {
   const profile = useContext(ProfileContext);
+  const { showAlert, AlertUI } = useAlert();
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
@@ -381,23 +382,32 @@ function LikeBookmarkBar({ feedId }: { feedId: number }) {
   if (!profile) return null;
 
   async function toggleLike() {
-    const { data } = await client.interaction.toggleLike(feedId);
+    const { data, error } = await client.interaction.toggleLike(feedId);
+    if (error) {
+      showAlert(error.value as string);
+      return;
+    }
     if (data) { setLiked(data.liked); setLikes(l => data.liked ? l + 1 : l - 1); }
   }
   async function toggleBookmark() {
-    const { data } = await client.interaction.toggleBookmark(feedId);
+    const { data, error } = await client.interaction.toggleBookmark(feedId);
+    if (error) {
+      showAlert(error.value as string);
+      return;
+    }
     if (data) setBookmarked(data.bookmarked);
   }
 
   return (
     <div className="flex items-center gap-3">
-      <button onClick={toggleLike} className={`flex items-center gap-1 text-sm transition-colors ${liked ? "text-theme" : "text-gray-400 hover:text-theme"}`}>
-        <i className={liked ? "ri-heart-fill" : "ri-heart-line"} />
+      <button onClick={toggleLike} className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? "text-theme" : "text-gray-400 hover:text-theme"}`}>
+        <i className={`${liked ? "ri-heart-fill" : "ri-heart-line"} text-[18px] leading-none`} />
         {likes > 0 && <span>{likes}</span>}
       </button>
-      <button onClick={toggleBookmark} className={`flex items-center gap-1 text-sm transition-colors ${bookmarked ? "text-theme" : "text-gray-400 hover:text-theme"}`}>
-        <i className={bookmarked ? "ri-bookmark-fill" : "ri-bookmark-line"} />
+      <button onClick={toggleBookmark} className={`flex items-center gap-1.5 text-sm transition-colors ${bookmarked ? "text-theme" : "text-gray-400 hover:text-theme"}`}>
+        <i className={`${bookmarked ? "ri-bookmark-fill" : "ri-bookmark-line"} text-[18px] leading-none`} />
       </button>
+      <AlertUI />
     </div>
   );
 }
@@ -736,7 +746,7 @@ function CommentItem({
     <div
       id={`comment-${comment.id}`}
       style={{ scrollMarginTop: "var(--header-scroll-offset)" }}
-      className={`flex flex-row items-start rounded-xl mt-2 ${nested ? "ml-8" : ""}`}
+      className={`flex flex-row items-start rounded-xl ${nested ? "ml-8 mt-1.5" : "mt-2"}`}
     >
       <UserAvatarLink
         user={comment.user}
@@ -793,7 +803,7 @@ function CommentItem({
                   <i className="ri-more-fill t-secondary"></i>
                 </button>
               }
-              position="left center"
+              position="bottom right"
             >
               <div className="flex flex-row self-end mr-2">
                 <button
@@ -819,7 +829,7 @@ function CommentItem({
           </div>
         )}
         {!nested && comment.replies && comment.replies.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-1.5">
             {comment.replies.map((reply) => (
               <CommentItem
                 key={reply.id}

@@ -35,8 +35,6 @@ import { useTranslation } from "react-i18next";
 
 export function AppRoutes() {
   const { t } = useTranslation();
-  const profile = useContext(ProfileContext);
-  const writingTitle = profile?.permission ? t("writing") : t("writing_upload");
 
   return (
     <Switch>
@@ -85,11 +83,11 @@ export function AppRoutes() {
       </AdminRoute>
 
       {/* 所有登录用户都可以写文章 */}
-      <AdminRoute path="/admin/writing" requireLogin title={writingTitle} description={t("admin.writing_description")}>
+      <AdminRoute path="/admin/writing" requireLogin title={t("writing_upload")} sectionTitle={t("writing")} description={t("admin.writing_description")}>
         <WritingPage />
       </AdminRoute>
 
-      <AdminRoute path="/admin/writing/:id" requireLogin title={writingTitle} description={t("admin.writing_description")}>
+      <AdminRoute path="/admin/writing/:id" requireLogin title={t("writing_upload")} sectionTitle={t("writing")} description={t("admin.writing_description")}>
         {({ id }) => <WritingPage id={tryInt(0, id)} />}
       </AdminRoute>
 
@@ -189,6 +187,7 @@ function AdminRoute({
   requirePermission,
   requireLogin,
   title,
+  sectionTitle,
   description,
 }: {
   path: PathPattern;
@@ -196,6 +195,7 @@ function AdminRoute({
   requirePermission?: boolean;
   requireLogin?: boolean;
   title: string;
+  sectionTitle?: string;
   description: string;
 }) {
   const profile = useContext(ProfileContext);
@@ -212,7 +212,7 @@ function AdminRoute({
   return (
     <Route path={path}>
       {(params) => (
-        <AdminLayout title={title} description={description}>
+        <AdminLayout title={title} sectionTitle={sectionTitle} description={description}>
           {typeof content === "function" ? content(params) : content}
         </AdminLayout>
       )}

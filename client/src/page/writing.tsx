@@ -306,7 +306,7 @@ export function WritingPage({ id }: { id?: number }) {
             )}
           </div>
 
-          <div className="mt-5 grid gap-2 sm:gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(18rem,2fr)]">
+          <div className="mt-5 grid gap-2 sm:gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(16rem,1.15fr)_minmax(18rem,2fr)]">
             <FlatMetaRow
               className="cursor-pointer rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3"
               onClick={() => setDraft(!draft)}
@@ -323,7 +323,7 @@ export function WritingPage({ id }: { id?: number }) {
               className="cursor-pointer rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3"
               onClick={() => setListed(!listed)}
             >
-              <p>{t('listed')}</p>
+              <p className="min-w-0 whitespace-nowrap text-[clamp(0.75rem,1.1vw,0.875rem)]">{t('listed')}</p>
               <Checkbox
                 id="listed"
                 value={listed}

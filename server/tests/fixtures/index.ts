@@ -157,6 +157,30 @@ export function createMockDB() {
             FOREIGN KEY (hashtag_id) REFERENCES hashtags(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS feed_likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feed_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at INTEGER DEFAULT (unixepoch()),
+            FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(feed_id, user_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_feed_likes_feed_id ON feed_likes(feed_id);
+
+        CREATE TABLE IF NOT EXISTS feed_bookmarks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feed_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at INTEGER DEFAULT (unixepoch()),
+            FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(feed_id, user_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_feed_bookmarks_feed_id ON feed_bookmarks(feed_id);
+
         -- Cache table
         CREATE TABLE IF NOT EXISTS cache (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
