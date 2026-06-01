@@ -139,6 +139,9 @@
   "description": "描述",
   "draft": "草稿",
   "draft_bin": "草稿箱",
+  "draft_save": "存草稿",
+  "draft_saved": "已存入草稿箱",
+  "draft_full": "草稿箱已满（最多 3 篇）",
   "edit": "编辑",
   "edit_history": {
     "title": "编辑历史",

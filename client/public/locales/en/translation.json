@@ -139,6 +139,9 @@
   "description": "Description",
   "draft": "Draft",
   "draft_bin": "Draft Bin",
+  "draft_save": "Save Draft",
+  "draft_saved": "Saved to draft bin",
+  "draft_full": "Draft bin is full (max 3)",
   "edit": "Edit",
   "edit_history": {
     "title": "Edit History",

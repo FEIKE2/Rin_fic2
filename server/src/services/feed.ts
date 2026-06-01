@@ -167,6 +167,16 @@ export function FeedService(): Hono<{
             return c.text('User ID is required', 400);
         }
 
+        // 普通用户草稿箱最多存 3 篇
+        if (draft && !admin) {
+            const draftCount = await profileAsync(c, 'feed_create_draft_count', () =>
+                db.select({ count: count() }).from(feeds).where(and(eq(feeds.uid, uid), eq(feeds.draft, 1)))
+            );
+            if (draftCount[0].count >= 3) {
+                return c.text('Draft box is full', 400);
+            }
+        }
+
         const result = await profileAsync(c, 'feed_create_insert', () => db.insert(feeds).values({
             title,
             content,

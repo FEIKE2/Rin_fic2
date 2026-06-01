@@ -139,6 +139,9 @@
   "description": "説明",
   "draft": "下書き",
   "draft_bin": "下書き",
+  "draft_save": "下書き保存",
+  "draft_saved": "下書きに保存しました",
+  "draft_full": "下書きが上限に達しました（最大3件）",
   "edit": "編集",
   "edit_history": {
     "title": "編集履歴",

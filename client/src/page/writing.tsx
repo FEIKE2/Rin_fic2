@@ -15,6 +15,11 @@ import { ProfileContext } from "../state/profile";
 import mermaid from 'mermaid';
 import { MarkdownEditor } from '../components/markdown_editor';
 
+function humanizeFeedError(value: string) {
+  if (value === "Draft box is full") return i18n.t("draft_full");
+  return value;
+}
+
 async function publish({
   title,
   alias,
@@ -55,12 +60,12 @@ async function publish({
     onCompleted();
   }
   if (error) {
-    showAlert(error.value as string);
+    showAlert(humanizeFeedError(error.value as string));
   }
   if (data) {
-    showAlert(t("publish.success"), () => {
+    showAlert(draft ? t("draft_saved") : t("publish.success"), () => {
       Cache.with().clear();
-      window.location.href = "/feed/" + data.insertedId;
+      window.location.href = draft ? "/?type=draft" : "/feed/" + data.insertedId;
     });
   }
 }
@@ -111,11 +116,11 @@ async function update({
     onCompleted();
   }
   if (error) {
-    showAlert(error.value as string);
+    showAlert(humanizeFeedError(error.value as string));
   } else {
-    showAlert(t("update.success"), () => {
+    showAlert(draft ? t("draft_saved") : t("update.success"), () => {
       Cache.with(id).clear();
-      window.location.href = "/feed/" + id;
+      window.location.href = draft ? "/?type=draft" : "/feed/" + id;
     });
   }
 }
@@ -131,20 +136,35 @@ export function WritingPage({ id }: { id?: number }) {
   const [summary, setSummary] = cache.useCache("summary", "");
   const [tags, setTags] = cache.useCache("tags", "");
   const [alias, setAlias] = cache.useCache("alias", "");
-  const [draft, setDraft] = useState(false);
   const [loginRequired, setLoginRequired] = useState(false);
   const [content, setContent] = cache.useCache("content", "");
   const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date());
   const [editReason, setEditReason] = useState("");
   const [publishing, setPublishing] = useState(false)
   const { showAlert, AlertUI } = useAlert()
-  function publishButton() {
+  async function submitFeed(asDraft: boolean) {
     if (publishing) return;
+    if (!title) {
+      showAlert(t("title_empty"))
+      return;
+    }
+    if (!content) {
+      showAlert(t("content.empty"))
+      return;
+    }
     const tagsplit =
       tags
         .split("#")
         .filter((tag) => tag !== "")
         .map((tag) => tag.trim()) || [];
+    // 普通用户存新草稿时检查草稿箱是否已满（最多 3 篇）
+    if (asDraft && id === undefined && !isAdmin) {
+      const { data } = await client.feed.list({ type: "draft", limit: 1 });
+      if (data && data.size >= 3) {
+        showAlert(t("draft_full"))
+        return;
+      }
+    }
     if (id !== undefined) {
       setPublishing(true)
       update({
@@ -154,7 +174,7 @@ export function WritingPage({ id }: { id?: number }) {
         summary,
         alias,
         tags: tagsplit,
-        draft,
+        draft: asDraft,
         loginRequired,
         createdAt,
         editReason,
@@ -164,21 +184,13 @@ export function WritingPage({ id }: { id?: number }) {
         showAlert
       });
     } else {
-      if (!title) {
-        showAlert(t("title_empty"))
-        return;
-      }
-      if (!content) {
-        showAlert(t("content.empty"))
-        return;
-      }
       setPublishing(true)
       publish({
         title,
         content,
         summary,
         tags: tagsplit,
-        draft,
+        draft: asDraft,
         alias,
         loginRequired,
         createdAt,
@@ -203,7 +215,6 @@ export function WritingPage({ id }: { id?: number }) {
             if (content == "") setContent(data.content);
             if (summary == "") setSummary((data as any).summary || "");
             setLoginRequired((data as any).loginRequired === 1);
-            setDraft((data as any).draft === 1);
             setCreatedAt(new Date(data.createdAt));
           }
         });
@@ -236,14 +247,23 @@ export function WritingPage({ id }: { id?: number }) {
   }, [content, debouncedUpdate]);
   function PublishButton({ className }: { className?: string }) {
     return (
-      <button
-        onClick={publishButton}
-        className={`inline-flex items-center justify-center gap-2 rounded-xl bg-theme px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-theme-hover active:bg-theme-active disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ""}`}
-        disabled={publishing}
-      >
-        {publishing && <Loading type="spin" height={16} width={16} />}
-        <span>{t('publish.title')}</span>
-      </button>
+      <div className={`flex items-center gap-2 ${className ?? ""}`}>
+        <button
+          onClick={() => submitFeed(false)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-theme px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-theme-hover active:bg-theme-active disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={publishing}
+        >
+          {publishing && <Loading type="spin" height={16} width={16} />}
+          <span>{t('publish.title')}</span>
+        </button>
+        <button
+          onClick={() => submitFeed(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-transparent px-5 py-3 text-sm font-medium t-primary transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:bg-white/5"
+          disabled={publishing}
+        >
+          <span>{t('draft_save')}</span>
+        </button>
+      </div>
     );
   }
 
@@ -306,19 +326,7 @@ export function WritingPage({ id }: { id?: number }) {
             )}
           </div>
 
-          <div className="mt-5 grid gap-2 sm:gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(16rem,1.15fr)_minmax(18rem,2fr)]">
-            <FlatMetaRow
-              className="cursor-pointer rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3"
-              onClick={() => setDraft(!draft)}
-            >
-              <p>{t('visible.self_only')}</p>
-              <Checkbox
-                id="draft"
-                value={draft}
-                setValue={setDraft}
-                placeholder={t('draft')}
-              />
-            </FlatMetaRow>
+          <div className="mt-5 grid gap-2 sm:gap-3 sm:grid-cols-2">
             <FlatMetaRow
               className="cursor-pointer rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3"
               onClick={() => setLoginRequired(!loginRequired)}
@@ -331,7 +339,7 @@ export function WritingPage({ id }: { id?: number }) {
                 placeholder={t('visible.login_only')}
               />
             </FlatMetaRow>
-            <FlatMetaRow className="gap-3 rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3 xl:col-span-1">
+            <FlatMetaRow className="gap-3 rounded-none border-0 bg-transparent px-0 py-2 sm:rounded-2xl sm:border sm:bg-secondary sm:px-4 sm:py-3">
               <p className="mr-2 whitespace-nowrap">
                 {t('created_at')}
               </p>

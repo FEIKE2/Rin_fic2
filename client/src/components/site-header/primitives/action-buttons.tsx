@@ -161,12 +161,18 @@ export function UserAvatar({
   const config = useContext(ClientConfigContext);
   const [isOpen, setIsOpen] = useState(false);
   const [hasBookmarks, setHasBookmarks] = useState(false);
+  const [draftCount, setDraftCount] = useState(0);
   const shouldShowEntry = Boolean(profile) || config.getBoolean("login.enabled");
 
   useEffect(() => {
     if (profile && !profile.permission) {
       client.interaction.bookmarks().then(({ data }) => {
         if (data && data.length > 0) setHasBookmarks(true);
+      });
+    }
+    if (profile) {
+      client.feed.list({ type: "draft", limit: 1 }).then(({ data }) => {
+        if (data) setDraftCount(data.size);
       });
     }
   }, [profile]);
@@ -236,6 +242,15 @@ export function UserAvatar({
               <i className="ri-edit-line" />
               <span>{profile.permission ? t("writing") : t("writing_upload")}</span>
             </button>
+            {draftCount > 0 && (
+              <button
+                onClick={() => { setIsOpen(false); setLocation("/?type=draft"); }}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                <i className="ri-draft-line" />
+                <span>{t("draft_bin")}</span>
+              </button>
+            )}
             {hasBookmarks && !profile.permission && (
               <button
                 onClick={() => { setIsOpen(false); setLocation("/bookmarks"); }}
