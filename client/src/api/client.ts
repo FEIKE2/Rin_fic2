@@ -589,10 +589,12 @@ class StorageAPI {
   constructor(private http: HttpClient) {}
 
   // POST /api/storage
-  async upload(file: File, key?: string): Promise<ApiResponse<UploadResponse>> {
+  async upload(file: File, key?: string, options?: { kind?: "image" | "file"; content?: string }): Promise<ApiResponse<UploadResponse>> {
     const formData = new FormData();
     formData.append("file", file);
     if (key) formData.append("key", key);
+    if (options?.kind) formData.append("kind", options.kind);
+    if (options?.content !== undefined) formData.append("content", options.content);
     
     return this.http.post<UploadResponse>("/api/storage", formData);
   }

@@ -6,6 +6,7 @@ import { profileAsync } from "../core/server-timing";
 import { notify } from "../utils/webhook";
 import { resolveWebhookConfig } from "./config-helpers";
 import { adjustFeedDynamicHotScore, getHotConfig } from "./hot-score";
+import { extractRinFileUrls } from "./file-attachments";
 
 export function CommentService(): Hono {
     const app = new Hono();
@@ -138,6 +139,9 @@ export function CommentService(): Hono {
             }
             if (content.length > 1000) {
                 return c.text('Comment too long', 400);
+            }
+            if (extractRinFileUrls(content).length > 0) {
+                return c.text('File attachments are not allowed in comments', 400);
             }
         }
         

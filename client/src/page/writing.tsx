@@ -17,6 +17,10 @@ import { MarkdownEditor } from '../components/markdown_editor';
 
 function humanizeFeedError(value: string) {
   if (value === "Draft box is full") return i18n.t("draft_full");
+  if (value === "File count limit exceeded") return i18n.t("upload.file.count_limit_exceeded");
+  if (value === "File size limit exceeded") return i18n.t("upload.file.size_limit_exceeded");
+  if (value === "Unknown file attachment") return i18n.t("upload.file.unknown_attachment");
+  if (value === "Invalid file attachment") return i18n.t("upload.file.invalid_attachment");
   return value;
 }
 
@@ -366,7 +370,7 @@ export function WritingPage({ id }: { id?: number }) {
         {MetaInput({ className: "p-4 sm:p-5 md:p-6" })}
 
         <FlatPanel className="overflow-hidden p-0">
-          <MarkdownEditor content={content} setContent={setContent} height='680px' />
+          <MarkdownEditor content={content} setContent={setContent} height='680px' allowFileUpload />
         </FlatPanel>
       </div>
       <AlertUI />

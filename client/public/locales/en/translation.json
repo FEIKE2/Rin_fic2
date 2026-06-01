@@ -404,6 +404,19 @@
       },
       "title": "Friend Link Settings"
     },
+    "upload": {
+      "title": "File uploads",
+      "fields": {
+        "file_count_limit": {
+          "title": "User file count limit",
+          "desc": "Maximum number of file attachments owned by a non-admin user in one post body; shared references to other users' files are not counted"
+        },
+        "file_total_size_mb": {
+          "title": "User file size limit",
+          "desc": "Maximum total size in MB of file attachments owned by a non-admin user in one post body; shared references to other users' files are not counted"
+        }
+      }
+    },
     "hot": {
       "title": "Popular Sorting",
       "fields": {
@@ -625,7 +638,15 @@
   "upload": {
     "failed": "Upload failed",
     "failed$size": "Upload failed, file size cannot exceed {{size}} MB",
+    "file": {
+      "button": "Upload file",
+      "count_limit_exceeded": "File count limit exceeded",
+      "size_limit_exceeded": "File size limit exceeded",
+      "unknown_attachment": "This post contains an unregistered file attachment",
+      "invalid_attachment": "This post contains an invalid file attachment"
+    },
     "image": {
+      "button": "Upload image",
       "clear": "Clear image",
       "drag_drop": "Drag an image here, or click to choose one",
       "drag_hint": "You can also paste an image URL directly",

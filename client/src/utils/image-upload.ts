@@ -83,6 +83,12 @@ export function buildMarkdownImage(fileName: string, url: string, metadata: Imag
   return `![${safeAlt}](${attachImageMetadataToUrl(safeUrl, metadata)})\n`;
 }
 
+export function buildMarkdownFile(fileName: string, url: string) {
+  const safeName = fileName.replace(/[[\]]/g, "");
+  const safeUrl = url.replace(/\s/g, "%20");
+  return `[${safeName}](${safeUrl} "rin_file")\n`;
+}
+
 async function loadImage(file: File) {
   const objectUrl = URL.createObjectURL(file);
 
@@ -275,5 +281,31 @@ export async function uploadImageFile(file: File): Promise<UploadedImageResult> 
   return {
     url,
     ...(metadataResult.status === "fulfilled" ? metadataResult.value : {}),
+  };
+}
+
+export async function uploadAttachmentFile(file: File, content: string) {
+  const { data, error } = await client.storage.upload(file, file.name, {
+    kind: "file",
+    content,
+  });
+
+  if (error) {
+    throw new Error(error.value);
+  }
+
+  const url =
+    typeof data === "string"
+      ? data
+      : data?.url;
+
+  if (!url) {
+    throw new Error("Invalid upload response");
+  }
+
+  return {
+    url,
+    name: data?.name || file.name,
+    size: data?.size || file.size,
   };
 }

@@ -164,6 +164,10 @@ export const uploads = sqliteTable("uploads", {
     id: integer("id").primaryKey(),
     storageKey: text("storage_key").notNull(),
     url: text("url").notNull(),
+    kind: text("kind").default("image").notNull(),
+    originalName: text("original_name").default("").notNull(),
+    size: integer("size").default(0).notNull(),
+    mimeType: text("mime_type").default("").notNull(),
     uid: integer("uid").references(() => users.id, { onDelete: 'set null' }),
     createdAt: created_at,
 }, (table) => ({

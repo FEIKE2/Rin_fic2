@@ -1,6 +1,10 @@
 import { path_join } from "./path";
 import { buildS3ObjectUrl, createS3Client, putObject as putS3Object } from "./s3";
 
+type PutStorageOptions = {
+  contentDisposition?: string;
+};
+
 type StorageTarget =
   | {
       type: "r2";
@@ -158,11 +162,12 @@ export async function putStorageObject(
   body: Blob | ArrayBuffer | Uint8Array | string,
   contentType?: string,
   baseUrl?: string,
+  options: PutStorageOptions = {},
 ) {
   const target = resolveStorageTarget(env);
   const storageKey = path_join(target.folder, key);
 
-  return putStorageObjectAtKey(env, storageKey, body, contentType, baseUrl);
+  return putStorageObjectAtKey(env, storageKey, body, contentType, baseUrl, options);
 }
 
 export async function putStorageObjectAtKey(
@@ -171,14 +176,18 @@ export async function putStorageObjectAtKey(
   body: Blob | ArrayBuffer | Uint8Array | string,
   contentType?: string,
   baseUrl?: string,
+  options: PutStorageOptions = {},
 ) {
   if (env.R2_BUCKET) {
     await env.R2_BUCKET.put(storageKey, body, {
-      httpMetadata: contentType ? { contentType } : undefined,
+      httpMetadata: {
+        ...(contentType ? { contentType } : {}),
+        ...(options.contentDisposition ? { contentDisposition: options.contentDisposition } : {}),
+      },
     });
   } else {
     const client = createS3Client(env);
-    await putS3Object(client, env, storageKey, body, contentType);
+    await putS3Object(client, env, storageKey, body, contentType, options.contentDisposition);
   }
 
   return {

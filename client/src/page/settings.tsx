@@ -606,6 +606,24 @@ export function Settings() {
             }}
           />
 
+          <ItemTitle title={t("settings.upload.title")} />
+          {[
+            { id: "file_count_limit", key: "upload.file_count_limit" },
+            { id: "file_total_size_mb", key: "upload.file_total_size_mb" },
+          ].map(({ id, key }) => (
+            <ItemInput
+              key={key}
+              title={t(`settings.upload.fields.${id}.title`)}
+              description={t(`settings.upload.fields.${id}.desc`)}
+              configKeyTitle={key}
+              value={String(draft.serverConfig[key] ?? "")}
+              placeholder={String(serverConfig.default(key) ?? "")}
+              onChange={(value) => {
+                setConfigValue("server", key, value);
+              }}
+            />
+          ))}
+
           <ItemTitle title={t("settings.hot.title")} />
           {[
             { id: "word_weight_per_1000", key: "hot.word_weight_per_1000" },

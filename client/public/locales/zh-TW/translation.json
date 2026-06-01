@@ -404,6 +404,19 @@
       },
       "title": "友情連結設定"
     },
+    "upload": {
+      "title": "檔案上傳",
+      "fields": {
+        "file_count_limit": {
+          "title": "一般使用者檔案數量上限",
+          "desc": "非管理員使用者單篇正文中本人檔案附件的數量上限；共同引用他人檔案不計入"
+        },
+        "file_total_size_mb": {
+          "title": "一般使用者檔案總大小上限",
+          "desc": "非管理員使用者單篇正文中本人檔案附件的總大小（MB）；共同引用他人檔案不計入"
+        }
+      }
+    },
     "hot": {
       "title": "熱門排序",
       "fields": {
@@ -625,7 +638,15 @@
   "upload": {
     "failed": "上傳失敗",
     "failed$size": "上傳失敗，文件大小不能超過 {{size}} MB",
+    "file": {
+      "button": "上傳檔案",
+      "count_limit_exceeded": "檔案數量超過上限",
+      "size_limit_exceeded": "檔案總大小超過上限",
+      "unknown_attachment": "存在未登記的檔案附件",
+      "invalid_attachment": "存在無效的檔案附件"
+    },
     "image": {
+      "button": "上傳圖片",
       "clear": "清空圖片",
       "drag_drop": "拖拽圖片到這裡，或點擊選擇圖片",
       "drag_hint": "也可以直接填寫圖片 URL",

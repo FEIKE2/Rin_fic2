@@ -217,6 +217,10 @@ export function createMockDB() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             storage_key TEXT NOT NULL,
             url TEXT NOT NULL,
+            kind TEXT DEFAULT 'image' NOT NULL,
+            original_name TEXT DEFAULT '' NOT NULL,
+            size INTEGER DEFAULT 0 NOT NULL,
+            mime_type TEXT DEFAULT '' NOT NULL,
             uid INTEGER,
             created_at INTEGER DEFAULT (unixepoch()) NOT NULL,
             FOREIGN KEY (uid) REFERENCES users(id) ON DELETE SET NULL

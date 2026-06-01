@@ -404,6 +404,19 @@
       },
       "title": "友链设置"
     },
+    "upload": {
+      "title": "文件上传",
+      "fields": {
+        "file_count_limit": {
+          "title": "普通用户文件数量上限",
+          "desc": "非管理员用户单篇正文中本人文件附件的数量上限；共同引用他人文件不计入"
+        },
+        "file_total_size_mb": {
+          "title": "普通用户文件总大小上限",
+          "desc": "非管理员用户单篇正文中本人文件附件的总大小（MB）；共同引用他人文件不计入"
+        }
+      }
+    },
     "hot": {
       "title": "热门排序",
       "fields": {
@@ -625,7 +638,15 @@
   "upload": {
     "failed": "上传失败",
     "failed$size": "上传失败，文件大小不能超过 {{size}} MB",
+    "file": {
+      "button": "上传文件",
+      "count_limit_exceeded": "文件数量超过上限",
+      "size_limit_exceeded": "文件总大小超过上限",
+      "unknown_attachment": "存在未登记的文件附件",
+      "invalid_attachment": "存在无效的文件附件"
+    },
     "image": {
+      "button": "上传图片",
       "clear": "清空图片",
       "drag_drop": "拖拽图片到这里，或点击选择图片",
       "drag_hint": "也可以直接填写图片 URL",

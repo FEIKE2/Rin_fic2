@@ -286,6 +286,20 @@ describe('CommentService', () => {
             expect(res.status).toBe(400);
         });
 
+        it('should reject file attachments in comments', async () => {
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: '[file.pdf](https://cdn.example/file.pdf "rin_file")' }),
+            }, env);
+
+            expect(res.status).toBe(400);
+            expect(await res.text()).toContain('File attachments are not allowed in comments');
+        });
+
         it('should return 401 for non-existent user token', async () => {
             const res = await app.request('/1', {
                 method: 'POST',

@@ -285,6 +285,21 @@ export function Markdown({ content }: { content: string }) {
           );
         },
         a({ children, ...props }) {
+          if (props.title === "rin_file") {
+            return (
+              <a
+                {...props}
+                title={typeof children === "string" ? children : undefined}
+                className="my-3 flex w-full items-center gap-3 rounded-xl border border-theme/40 bg-theme/10 px-4 py-3 text-theme no-underline transition-colors hover:bg-theme/15 hover:no-underline"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-theme text-white">
+                  <i className="ri-file-line text-xl" />
+                </span>
+                <span className="min-w-0 truncate text-sm font-medium t-primary">{children}</span>
+              </a>
+            );
+          }
+
           return (
             <a
               className="text-[#0686c8] dark:text-[#2590f1] hover:underline"

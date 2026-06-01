@@ -9,6 +9,7 @@ import { syncFeedAISummaryQueueState } from "./feed-ai-summary";
 import { bindTagToPost } from "./tag";
 import { clearFeedCache } from "./clear-feed-cache";
 import { adjustFeedDynamicHotScore, getHotConfig, updateFeedContentHotScore } from "./hot-score";
+import { enforceFileAttachmentLimits, FileAttachmentLimitError } from "./file-attachments";
 export { clearFeedCache } from "./clear-feed-cache";
 
 // Lazy-loaded modules for WordPress import
@@ -151,6 +152,16 @@ export function FeedService(): Hono<{
         }
         if (!content) {
             return c.text('Content is required', 400);
+        }
+        try {
+            await profileAsync(c, 'feed_create_file_limit_check', () =>
+                enforceFileAttachmentLimits(db, serverConfig, content, Boolean(admin), Number(uid))
+            );
+        } catch (error) {
+            if (error instanceof FileAttachmentLimitError) {
+                return c.text(error.message, error.status as any);
+            }
+            throw error;
         }
 
         const exist = await profileAsync(c, 'feed_create_existing', () => db.query.feeds.findFirst({
@@ -440,6 +451,19 @@ export function FeedService(): Hono<{
         const isDraft = draft !== undefined ? draft : (feed.draft === 1);
         const shouldQueueAISummary = (contentChanged && !isDraft) || (!isDraft && feed.draft === 1 && !feed.ai_summary);
         const updateTime = new Date();
+
+        if (content !== undefined) {
+            try {
+                await profileAsync(c, 'feed_update_file_limit_check', () =>
+                    enforceFileAttachmentLimits(db, serverConfig, content, Boolean(admin), Number(uid))
+                );
+            } catch (error) {
+                if (error instanceof FileAttachmentLimitError) {
+                    return c.text(error.message, error.status as any);
+                }
+                throw error;
+            }
+        }
 
         // 保存编辑历史（如果内容、标题或摘要有变化）
         if ((contentChanged || titleChanged || summaryChanged) && uid) {

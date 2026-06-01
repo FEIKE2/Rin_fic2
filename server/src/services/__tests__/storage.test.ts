@@ -235,6 +235,52 @@ describe('StorageService', () => {
             expect(payload.url).toMatch(/^http:\/\/localhost\/api\/blob\/images\/[a-f0-9]+\.txt$/);
         });
 
+        it('should upload file attachments with attachment disposition and metadata', async () => {
+            const putCalls: Array<{ key: string; disposition?: string }> = [];
+            const r2Env = createMockEnv({
+                R2_BUCKET: {
+                    put: async (key: string, _value: any, options?: R2PutOptions) => {
+                        putCalls.push({
+                            key,
+                            disposition: options?.httpMetadata && 'contentDisposition' in options.httpMetadata
+                                ? options.httpMetadata.contentDisposition
+                                : undefined,
+                        });
+                        return {} as R2Object;
+                    },
+                } as unknown as R2Bucket,
+                S3_ACCESS_HOST: 'https://files.example.com' as any,
+                S3_ENDPOINT: '' as any,
+                S3_BUCKET: '' as any,
+                S3_ACCESS_KEY_ID: '',
+                S3_SECRET_ACCESS_KEY: '',
+            });
+            const r2App = createAppWithEnv(r2Env, 1);
+            const formData = new FormData();
+            formData.append('kind', 'file');
+            formData.append('content', '');
+            formData.append('key', 'report.html');
+            formData.append('file', new File(['hello'], 'report.html', { type: 'text/html' }));
+
+            const res = await r2App.request('/', {
+                method: 'POST',
+                body: formData,
+            }, r2Env);
+
+            expect(res.status).toBe(200);
+            expect(putCalls[0]?.key).toMatch(/^images\/files\/[a-f0-9]+\.html$/);
+            expect(putCalls[0]?.disposition).toContain('attachment');
+            const payload = await res.json() as { url: string; kind: string; name: string; size: number };
+            expect(payload.kind).toBe('file');
+            expect(payload.name).toBe('report.html');
+            expect(payload.size).toBe(5);
+            const row = sqlite.prepare(`SELECT kind, original_name, size, mime_type FROM uploads WHERE url = ?`).get(payload.url) as any;
+            expect(row.kind).toBe('file');
+            expect(row.original_name).toBe('report.html');
+            expect(row.size).toBe(5);
+            expect(row.mime_type).toStartWith('text/html');
+        });
+
         it('should return 500 when S3_ENDPOINT is not defined without R2 binding', async () => {
             const envNoS3 = createMockEnv({
                 S3_ENDPOINT: '' as any,
@@ -318,6 +364,42 @@ describe('StorageService', () => {
             expect(res.status).toBe(200);
             expect(res.headers.get('content-type')).toBe('text/plain');
             expect(await res.text()).toBe('test');
+        });
+
+        it('should force file attachment downloads through the blob route', async () => {
+            sqlite.exec(`
+                INSERT INTO uploads (storage_key, url, kind, original_name, size, mime_type, uid)
+                VALUES ('images/files/test.html', 'http://localhost/api/blob/images/files/test.html', 'file', 'report.html', 4, 'text/html', 1)
+            `);
+            const r2Env = createMockEnv({
+                R2_BUCKET: {
+                    get: async (key: string) => {
+                        if (key !== 'images/files/test.html') return null;
+                        return {
+                            key,
+                            size: 4,
+                            httpEtag: 'etag',
+                            uploaded: new Date('2025-01-01T00:00:00Z'),
+                            writeHttpMetadata(headers: Headers) {
+                                headers.set('Content-Type', 'text/html');
+                            },
+                            body: new Blob(['test']).stream(),
+                        } as unknown as R2ObjectBody;
+                    },
+                } as unknown as R2Bucket,
+                S3_ACCESS_HOST: '' as any,
+                S3_ENDPOINT: '' as any,
+                S3_BUCKET: '' as any,
+                S3_ACCESS_KEY_ID: '',
+                S3_SECRET_ACCESS_KEY: '',
+            });
+            const r2App = createAppWithEnv(r2Env, 1);
+
+            const res = await r2App.request('/blob/images/files/test.html', { method: 'GET' }, r2Env);
+
+            expect(res.status).toBe(200);
+            expect(res.headers.get('content-disposition')).toContain('attachment');
+            expect(res.headers.get('x-content-type-options')).toBe('nosniff');
         });
     });
 });

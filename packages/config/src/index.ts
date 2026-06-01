@@ -41,6 +41,8 @@ export const SERVER_CONFIG_DEFAULTS = new Map(
     "hot.comment_weight": 20,
     "hot.reply_weight": 8,
     "hot.daily_decay": 0.9057236643,
+    "upload.file_count_limit": 10,
+    "upload.file_total_size_mb": 30,
   }),
 );
 

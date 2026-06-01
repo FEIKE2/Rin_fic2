@@ -17,7 +17,8 @@ export async function putObject(
     env: Env,
     key: string,
     body: Blob | ArrayBuffer | Uint8Array | string,
-    contentType?: string
+    contentType?: string,
+    contentDisposition?: string
 ) {
     const endpoint = env.S3_ENDPOINT;
     const bucket = env.S3_BUCKET;
@@ -36,6 +37,9 @@ export async function putObject(
     const headers: Record<string, string> = {};
     if (contentType) {
         headers["Content-Type"] = contentType;
+    }
+    if (contentDisposition) {
+        headers["Content-Disposition"] = contentDisposition;
     }
     
     const response = await client.fetch(url, {

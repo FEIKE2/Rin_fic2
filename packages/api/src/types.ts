@@ -333,6 +333,9 @@ export interface AIConfig {
 
 export interface UploadResponse {
   url: string;
+  name?: string;
+  size?: number;
+  kind?: "image" | "file";
 }
 
 // ============================================================================

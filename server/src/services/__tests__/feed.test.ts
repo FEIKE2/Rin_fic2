@@ -358,6 +358,54 @@ describe('FeedService', () => {
 
             expect(res.status).toBe(400);
         });
+
+        it('should reject unknown rin_file attachments for non-admin users', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+
+            const res = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'File Feed',
+                    content: '[file.pdf](https://cdn.example/file.pdf "rin_file")',
+                    listed: true,
+                    draft: false,
+                    tags: [],
+                }),
+            }, env);
+
+            expect(res.status).toBe(400);
+            expect(await res.text()).toContain('Unknown file attachment');
+        });
+
+        it('should allow non-admin users to reference uploaded files from other users without counting them against limits', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+            await serverConfig.set('upload.file_total_size_mb', 1);
+            sqlite.exec(`
+                INSERT INTO uploads (storage_key, url, kind, original_name, size, mime_type, uid)
+                VALUES ('images/files/shared.pdf', 'https://cdn.example/shared.pdf', 'file', 'shared.pdf', 29 * 1024 * 1024, 'application/pdf', 1)
+            `);
+
+            const res = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Shared File Feed',
+                    content: '[shared.pdf](https://cdn.example/shared.pdf "rin_file")',
+                    listed: true,
+                    draft: false,
+                    tags: [],
+                }),
+            }, env);
+
+            expect(res.status).toBe(200);
+        });
     });
 
     describe('POST /:id - Update feed', () => {
