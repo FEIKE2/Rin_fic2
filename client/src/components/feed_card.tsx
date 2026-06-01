@@ -10,6 +10,7 @@ import { useImageLoadState } from "../utils/use-image-load-state";
 import { type FeedCardVariant, normalizeFeedCardVariant } from "./feed-card-options";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 import { ProfileContext } from "../state/profile";
+import { stripMarkdown } from "../utils/markdown-text";
 
 function FeedCardImage({ src }: { src: string }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,7 +119,10 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
                 {top === 1 && <span className="text-theme">{t('article.top.title')}</span>}
                 {hotBadge}
             </p>
-            {locked ? lockedNote : (summary ? <p className="line-clamp-4 text-pretty overflow-hidden dark:text-neutral-500">{summary}</p> : null)}
+            {locked ? lockedNote : (() => {
+                const previewText = stripMarkdown(summary);
+                return previewText ? <p className="line-clamp-4 text-pretty overflow-hidden dark:text-neutral-500">{previewText}</p> : null;
+            })()}
             {hashtags.length > 0 && (
                 <div className="flex flex-row flex-wrap justify-start gap-2 mt-2 gap-x-2">
                     {hashtags.map(({ name }, index) => <HashTag key={index} name={name} />)}

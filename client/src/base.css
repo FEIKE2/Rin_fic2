@@ -47,6 +47,12 @@
       scrollbar-width: none;
     }
 
+    /* 表情面板：让滚动视口外的分组跳过布局/绘制，避免一次性绘制数百个彩色 emoji 造成的卡顿 */
+    .emoji-group {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 132px;
+    }
+
     .scrollbar-none::-webkit-scrollbar {
       display: none;
     }

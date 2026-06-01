@@ -669,13 +669,13 @@ function CommentInput({
         position="top left"
         closeOnDocumentClick
         trigger={
-          <button type="button" title={t("comment.emoji")} className="bg-secondary bg-button t-secondary px-3 py-2 rounded-full leading-none">😀</button>
+          <button type="button" title={t("comment.emoji")} className="bg-secondary bg-button t-secondary px-3 h-10 rounded-full leading-none inline-flex items-center justify-center">😀</button>
         }
       >
         {((close: () => void) => (
           <div className={`${HEADER_POPUP_PANEL_CLASS} max-h-64 w-72 overflow-y-auto`}>
             {EMOJI_GROUPS.map((group) => (
-              <div key={group.key} className="mb-1">
+              <div key={group.key} className="emoji-group mb-1">
                 <p className="px-1 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
                   {t(`emoji.group.${group.key}`)}
                 </p>
@@ -706,7 +706,7 @@ function CommentInput({
               type="button"
               title={t("comment.insert_image")}
               disabled={uploading}
-              className="bg-secondary bg-button t-secondary px-3 py-2 rounded-full inline-flex items-center gap-1 disabled:opacity-60"
+              className="bg-secondary bg-button t-secondary px-3 h-10 rounded-full inline-flex items-center justify-center gap-1 disabled:opacity-60"
             >
               <i className="ri-image-add-line" />
               <span className="text-sm">{uploading ? t("comment.uploading") : t("comment.insert_image")}</span>
