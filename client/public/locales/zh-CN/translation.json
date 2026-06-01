@@ -259,8 +259,8 @@
     "total$count_other": "{{count}} 条动态"
   },
   "next": "下一页",
-  "previous_post": "上一篇",
-  "next_post": "下一篇",
+  "previous_post": "该作者的上一篇",
+  "next_post": "该作者的下一篇",
   "no_more": "没有更多了",
   "preview": "预览",
   "previous": "上一页",

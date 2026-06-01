@@ -103,4 +103,20 @@ describe('InteractionService', () => {
         expect(likeRes.status).toBe(403);
         expect(bookmarkRes.status).toBe(403);
     });
+
+    it('should reject interactions on draft feeds', async () => {
+        sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft Feed', 'Draft', 1, 1, 1)`);
+
+        const likeRes = await app.request('/3/like', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer mock_token_1' },
+        }, env);
+        const bookmarkRes = await app.request('/3/bookmark', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer mock_token_1' },
+        }, env);
+
+        expect(likeRes.status).toBe(403);
+        expect(bookmarkRes.status).toBe(403);
+    });
 });

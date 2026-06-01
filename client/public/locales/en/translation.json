@@ -259,8 +259,8 @@
     "total$count_other": "{{count}} moments in total"
   },
   "next": "Next Page",
-  "previous_post": "Previous",
-  "next_post": "Next",
+  "previous_post": "Previous by this author",
+  "next_post": "Next by this author",
   "no_more": "No More",
   "preview": "Preview",
   "previous": "Previous Page",

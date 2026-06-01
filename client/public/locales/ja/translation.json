@@ -250,8 +250,8 @@
     "total$count_other": "{{count}} 件の動態"
   },
   "next": "次のページ",
-  "previous_post": "前の記事",
-  "next_post": "次の記事",
+  "previous_post": "この作者の前の記事",
+  "next_post": "この作者の次の記事",
   "no_more": "もうない",
   "preview": "プレビュー",
   "previous": "前のページ",

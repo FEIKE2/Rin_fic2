@@ -115,6 +115,10 @@ export function AppRoutes() {
         {(params, toc, cleanup) => <FeedPage id={params.id || ""} TOC={toc} clean={cleanup} />}
       </TocRoute>
 
+      <TocRoute path="/draft/:id">
+        {(params, toc, cleanup) => <FeedPage id={params.id || ""} TOC={toc} clean={cleanup} draftRoute />}
+      </TocRoute>
+
       <TocRoute path="/:alias">
         {(params, toc, cleanup) => <FeedPage id={params.alias || ""} TOC={toc} clean={cleanup} />}
       </TocRoute>

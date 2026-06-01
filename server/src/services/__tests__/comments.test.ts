@@ -102,6 +102,16 @@ describe('CommentService', () => {
             const data = await res.json() as any;
             expect(data.length).toBe(2);
         });
+
+        it('should hide comments for draft feeds', async () => {
+            sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (4, 'Draft Feed', 'Draft', 1, 1, 1)`);
+            sqlite.exec(`INSERT INTO comments (id, feed_id, user_id, content, created_at) VALUES (20, 4, 1, 'Draft comment', unixepoch())`);
+
+            const res = await app.request('/4', { method: 'GET' }, env);
+
+            expect(res.status).toBe(200);
+            expect(await res.json() as any).toEqual([]);
+        });
     });
 
     describe('POST /:feed - Create comment', () => {
@@ -300,6 +310,22 @@ describe('CommentService', () => {
             }, env);
 
             expect(res.status).toBe(400);
+        });
+
+        it('should reject comments on draft feeds', async () => {
+            sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (4, 'Draft Feed', 'Draft', 1, 1, 1)`);
+
+            const res = await app.request('/4', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Draft comment' }),
+            }, env);
+
+            expect(res.status).toBe(400);
+            expect(await res.text()).toContain('Draft comments are disabled');
         });
 
         it('should still create the comment when webhook delivery fails', async () => {

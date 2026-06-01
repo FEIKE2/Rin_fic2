@@ -65,7 +65,7 @@ async function publish({
   if (data) {
     showAlert(draft ? t("draft_saved") : t("publish.success"), () => {
       Cache.with().clear();
-      window.location.href = draft ? "/?type=draft" : "/feed/" + data.insertedId;
+      window.location.href = draft ? "/draft/" + data.insertedId : "/feed/" + data.insertedId;
     });
   }
 }
@@ -120,7 +120,7 @@ async function update({
   } else {
     showAlert(draft ? t("draft_saved") : t("update.success"), () => {
       Cache.with(id).clear();
-      window.location.href = draft ? "/?type=draft" : "/feed/" + id;
+      window.location.href = draft ? "/draft/" + id : "/feed/" + id;
     });
   }
 }

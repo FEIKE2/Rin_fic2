@@ -462,7 +462,7 @@ export function FeedService(): Hono<{
             ai_summary_status: isDraft ? "idle" : undefined,
             ai_summary_error: shouldQueueAISummary || isDraft ? "" : undefined,
             alias,
-            top,
+            top: admin ? top : undefined,
             listed: listed === undefined ? undefined : listed ? 1 : 0,
             draft: draft === undefined ? undefined : draft ? 1 : 0,
             loginRequired: loginRequired === undefined ? undefined : loginRequired ? 1 : 0,
@@ -495,20 +495,19 @@ export function FeedService(): Hono<{
         const db = c.get('db');
         const cache = c.get('cache');
         const admin = c.get('admin');
-        const uid = c.get('uid');
         const id = c.req.param('id');
         const body = await profileAsync(c, 'feed_top_parse', () => c.req.json());
         const { top } = body;
+
+        if (!admin) {
+            return c.text('Permission denied', 403);
+        }
 
         const id_num = parseInt(id);
         const feed = await profileAsync(c, 'feed_top_lookup', () => db.query.feeds.findFirst({ where: eq(feeds.id, id_num) }));
 
         if (!feed) {
             return c.text('Not found', 404);
-        }
-
-        if (feed.uid !== uid && !admin) {
-            return c.text('Permission denied', 403);
         }
 
         await profileAsync(c, 'feed_top_db', () => db.update(feeds).set({ top }).where(eq(feeds.id, feed.id)));

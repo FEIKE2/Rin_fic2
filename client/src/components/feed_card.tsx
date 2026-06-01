@@ -144,7 +144,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
         );
     }
 
-    return <Link href={`/feed/${id}`} target="_blank" className="block w-full">{body}</Link>;
+    return <Link href={`/${draft === 1 ? "draft" : "feed"}/${id}`} target="_blank" className="block w-full">{body}</Link>;
 }
 
 function LoginTipModal({ onClose }: { onClose: () => void }) {

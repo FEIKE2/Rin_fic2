@@ -49,6 +49,7 @@ export function createMockDB() {
             content TEXT NOT NULL,
             listed INTEGER DEFAULT 1 NOT NULL,
             draft INTEGER DEFAULT 1 NOT NULL,
+            login_required INTEGER DEFAULT 0 NOT NULL,
             top INTEGER DEFAULT 0 NOT NULL,
             hot_score REAL DEFAULT 0 NOT NULL,
             hot_content_score REAL DEFAULT 0 NOT NULL,

@@ -38,6 +38,7 @@ export interface Feed {
   pv: number;
   uv: number;
   top?: number;
+  draft?: number;
   loginRequired?: number;
 }
 
@@ -56,6 +57,7 @@ export interface FeedListResponse {
     avatar: string | null;
     createdAt: string;
     updatedAt: string;
+    draft?: number;
     hotScore?: number;
     hotContentScore?: number;
     hotDynamicScore?: number;

@@ -43,6 +43,11 @@ export function InteractionService(): Hono {
         if (!uid) throw new ForbiddenError('Authentication required');
         const feedId = parseInt(c.req.param('feedId'));
         const config = await profileAsync(c, 'interaction_hot_config', () => getHotConfig(serverConfig));
+        const feed = await profileAsync(c, 'interaction_feed_lookup', () =>
+            db.query.feeds.findFirst({ where: eq(feeds.id, feedId), columns: { draft: true } })
+        );
+        if (!feed) throw new NotFoundError('Feed');
+        if (feed.draft) throw new ForbiddenError('Draft interactions are disabled');
 
         const existing = await profileAsync(c, 'interaction_like_existing', () =>
             db.query.feedLikes.findFirst({ where: and(eq(feedLikes.feedId, feedId), eq(feedLikes.userId, uid)) })
@@ -75,6 +80,11 @@ export function InteractionService(): Hono {
         if (!uid) throw new ForbiddenError('Authentication required');
         const feedId = parseInt(c.req.param('feedId'));
         const config = await profileAsync(c, 'interaction_hot_config', () => getHotConfig(serverConfig));
+        const feed = await profileAsync(c, 'interaction_feed_lookup', () =>
+            db.query.feeds.findFirst({ where: eq(feeds.id, feedId), columns: { draft: true } })
+        );
+        if (!feed) throw new NotFoundError('Feed');
+        if (feed.draft) throw new ForbiddenError('Draft interactions are disabled');
 
         const existing = await profileAsync(c, 'interaction_bookmark_existing', () =>
             db.query.feedBookmarks.findFirst({ where: and(eq(feedBookmarks.feedId, feedId), eq(feedBookmarks.userId, uid)) })

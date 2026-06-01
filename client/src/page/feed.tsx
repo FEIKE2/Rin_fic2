@@ -59,7 +59,7 @@ function extractFirstMarkdownImageUrl(content: string) {
   return stripImageUrlMetadata(match[1]);
 }
 
-export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Element, clean: (id: string) => void }) {
+export function FeedPage({ id, TOC, clean, draftRoute = false }: { id: string, TOC: () => JSX.Element, clean: (id: string) => void, draftRoute?: boolean }) {
   const { t } = useTranslation();
   const siteConfig = useSiteConfig();
   const profile = useContext(ProfileContext);
@@ -153,6 +153,11 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
           setError(error.value as string);
         } else if (data && typeof data !== "string") {
           setTimeout(() => {
+            if (data.draft === 1 && !draftRoute) {
+              setLocation(`/draft/${data.id}`, { replace: true });
+            } else if (data.draft !== 1 && draftRoute) {
+              setLocation(`/feed/${data.id}`, { replace: true });
+            }
             setFeed(data as any);
             setTop(data.top || 0);
             const headImageUrl = extractFirstMarkdownImageUrl(data.content);
@@ -287,13 +292,15 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                   <div className="pt-2">
                     {(profile?.permission || profile?.id === feed.user.id) && (
                       <div className="flex gap-2">
-                        <button
-                          aria-label={top > 0 ? t("untop.title") : t("top.title")}
-                          onClick={topFeed}
-                          className={`flex-1 flex flex-col items-end justify-center px-2 py rounded-full transition ${top > 0 ? "bg-theme text-white hover:bg-theme-hover active:bg-theme-active" : "bg-secondary bg-button dark:text-neutral-400"}`}
-                        >
-                          <i className="ri-skip-up-line" />
-                        </button>
+                        {profile?.permission && (
+                          <button
+                            aria-label={top > 0 ? t("untop.title") : t("top.title")}
+                            onClick={topFeed}
+                            className={`flex-1 flex flex-col items-end justify-center px-2 py rounded-full transition ${top > 0 ? "bg-theme text-white hover:bg-theme-hover active:bg-theme-active" : "bg-secondary bg-button dark:text-neutral-400"}`}
+                          >
+                            <i className="ri-skip-up-line" />
+                          </button>
+                        )}
                         {feed.createdAt !== feed.updatedAt && (
                           <button
                             aria-label={t("edit_history.view")}
@@ -362,12 +369,12 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                         {feed.user.username}
                       </span>
                     </div>
-                    <LikeBookmarkBar feedId={feed.id} />
+                    {feed.draft !== 1 && <LikeBookmarkBar feedId={feed.id} />}
                   </div>
                 </div>
               </article>
               <AdjacentSection id={id} setError={setError} />
-              {feed && (
+              {feed && feed.draft !== 1 && (
                 <div id="feed-comments" style={{ scrollMarginTop: "var(--header-scroll-offset)" }}>
                   <Comments id={`${feed.id}`} />
                 </div>

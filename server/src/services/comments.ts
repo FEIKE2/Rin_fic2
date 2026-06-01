@@ -13,6 +13,13 @@ export function CommentService(): Hono {
     app.get('/:feed', async (c: AppContext) => {
         const db = c.get('db');
         const feedId = parseInt(c.req.param('feed'));
+
+        const feed = await profileAsync(c, 'comment_list_feed', () =>
+            db.query.feeds.findFirst({ where: eq(feeds.id, feedId), columns: { draft: true } })
+        );
+        if (feed?.draft) {
+            return c.json([]);
+        }
         
         const comment_list = await profileAsync(c, 'comment_list_db', () => db.query.comments.findMany({
             where: eq(comments.feedId, feedId),
@@ -137,6 +144,10 @@ export function CommentService(): Hono {
         const exist = await profileAsync(c, 'comment_create_feed', () => db.query.feeds.findFirst({ where: eq(feeds.id, feedId) }));
         if (!exist) {
             return c.text('Feed not found', 400);
+        }
+
+        if (exist.draft) {
+            return c.text('Draft comments are disabled', 400);
         }
 
         if (parentId) {

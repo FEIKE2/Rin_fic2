@@ -435,6 +435,65 @@ describe('FeedService', () => {
 
             expect(updateRes.status).toBe(403);
         });
+
+        it('should ignore top changes from non-admin authors', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+
+            const createRes = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Author Feed',
+                    content: 'Author Content',
+                    listed: true,
+                    draft: false,
+                    tags: [],
+                }),
+            }, env);
+
+            expect(createRes.status).toBe(200);
+            const createData = await createRes.json() as any;
+
+            const updateRes = await app.request(`/${createData.insertedId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Updated Author Feed',
+                    top: 1,
+                }),
+            }, env);
+
+            expect(updateRes.status).toBe(200);
+            const row = sqlite.prepare(`SELECT top, title FROM feeds WHERE id = ?`).get(createData.insertedId) as any;
+            expect(row.top).toBe(0);
+            expect(row.title).toBe('Updated Author Feed');
+        });
+    });
+
+    describe('POST /top/:id - Set top', () => {
+        it('should require admin permission even for the author', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+            sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed, top) VALUES (20, 'Author Feed', 'Content', 2, 0, 1, 0)`);
+
+            const res = await app.request('/top/20', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ top: 1 }),
+            }, env);
+
+            expect(res.status).toBe(403);
+            const row = sqlite.prepare(`SELECT top FROM feeds WHERE id = 20`).get() as any;
+            expect(row.top).toBe(0);
+        });
     });
 
     describe('DELETE /:id - Delete feed', () => {
