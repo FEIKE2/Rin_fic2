@@ -93,6 +93,27 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
         { icon: "ri-heart-line", label: t("feed_card.stats.likes"), value: likeCount ?? 0 },
         { icon: "ri-bookmark-line", label: t("feed_card.stats.bookmarks"), value: bookmarkCount ?? 0 },
     ];
+    const statsFull = hasStats ? (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-black/5 pt-3 text-xs text-gray-400 dark:border-white/10 dark:text-neutral-500">
+            {stats.map(({ icon, label, value }) => (
+                <span key={label} className="inline-flex items-center gap-1.5" title={`${label}: ${value}`}>
+                    <i className={icon} aria-hidden="true" />
+                    <span>{label}</span>
+                    <span className="font-medium text-gray-500 dark:text-neutral-400">{formatStatValue(value)}</span>
+                </span>
+            ))}
+        </div>
+    ) : null;
+    const statsCompact = hasStats ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-400 dark:text-neutral-500">
+            {stats.map(({ icon, label, value }) => (
+                <span key={label} className="inline-flex items-center gap-1" title={`${label}: ${value}`}>
+                    <i className={icon} aria-hidden="true" />
+                    <span className="font-medium text-gray-500 dark:text-neutral-400">{formatStatValue(value)}</span>
+                </span>
+            ))}
+        </div>
+    ) : null;
 
     const lockedNote = (
         <p className="mt-2 text-sm italic text-neutral-500 dark:text-neutral-400">{t("visible.login_only")}</p>
@@ -113,6 +134,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
                 {top === 1 && <span className="text-theme">{t('article.top.title')}</span>}
                 {hotBadge}
             </p>
+            {statsCompact}
         </div>
     ) : (
         // 默认风：不显示正文内容，只显示图片（如有）、标题、时间、简介（如有）、用户名、标签
@@ -145,17 +167,7 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
                     {hashtags.map(({ name }, index) => <HashTag key={index} name={name} />)}
                 </div>
             )}
-            {hasStats && (
-                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-black/5 pt-3 text-xs text-gray-400 dark:border-white/10 dark:text-neutral-500">
-                    {stats.map(({ icon, label, value }) => (
-                        <span key={label} className="inline-flex items-center gap-1.5" title={`${label}: ${value}`}>
-                            <i className={icon} aria-hidden="true" />
-                            <span>{label}</span>
-                            <span className="font-medium text-gray-500 dark:text-neutral-400">{formatStatValue(value)}</span>
-                        </span>
-                    ))}
-                </div>
-            )}
+            {statsFull}
         </div>
     );
 
