@@ -63,6 +63,9 @@ export interface FeedListResponse {
     hotDynamicScore?: number;
     pv: number;
     uv: number;
+    commentCount: number;
+    likeCount: number;
+    bookmarkCount: number;
     loginRequired?: number;
   }>;
   hasNext: boolean;

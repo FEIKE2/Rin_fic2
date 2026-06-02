@@ -193,7 +193,14 @@
   "feed_card": {
     "published$time": "{{time}} 发布",
     "updated$time": "{{time}} 更新",
-    "edited$time": "最后编辑于 {{time}}"
+    "edited$time": "最后编辑于 {{time}}",
+    "stats": {
+      "views": "浏览量",
+      "visitors": "访客量",
+      "comments": "评论数",
+      "likes": "点赞数",
+      "bookmarks": "收藏数"
+    }
   },
   "footer": {
     "rss": "RSS 订阅链接"

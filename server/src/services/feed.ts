@@ -1,8 +1,8 @@
-import { and, asc, count, desc, eq, gt, like, lt, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, like, lt, or } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Variables } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
-import { feeds, visits, visitStats, feedEditHistory } from "../db/schema";
+import { comments, feedBookmarks, feedLikes, feeds, visits, visitStats, feedEditHistory } from "../db/schema";
 import { HyperLogLog } from "../utils/hyperloglog";
 import { extractImageWithMetadata } from "../utils/image";
 import { syncFeedAISummaryQueueState } from "./feed-ai-summary";
@@ -27,6 +27,11 @@ async function initWPModules() {
         const h2m = await import("html-to-md");
         html2md = h2m.default;
     }
+}
+
+function estimateUv(hllData?: string | null) {
+    if (!hllData) return 0;
+    return Math.round(new HyperLogLog(hllData).count());
 }
 
 export function FeedService(): Hono<{
@@ -60,7 +65,7 @@ export function FeedService(): Hono<{
         const limit_num = limit ? parseInt(limit) > 50 ? 50 : parseInt(limit) : 20;
         // 普通用户的草稿列表只含本人，缓存键需带 uid 区分
         const draftScope = type === 'draft' && !admin ? `_u${uid}` : '';
-        const cacheKey = `feeds_${type}_${sort}_${page_num}_${limit_num}${draftScope}`;
+        const cacheKey = `feeds_v2_${type}_${sort}_${page_num}_${limit_num}${draftScope}`;
         const cached = await profileAsync(c, 'feed_list_cache_get', () => cache.get(cacheKey));
 
         if (cached && sort !== 'popular') {
@@ -112,7 +117,56 @@ export function FeedService(): Hono<{
             hasNext = true;
         }
 
-        const data = { size: size[0].count, data: feed_list, hasNext };
+        const feedIds = feed_list.map((feed: any) => Number(feed.id)).filter((id: number) => Number.isFinite(id));
+        let dataList = feed_list;
+        if (feedIds.length > 0) {
+            const [statsRows, commentRows, likeRows, bookmarkRows] = await profileAsync(c, 'feed_list_stats', () => Promise.all([
+                db.select({
+                    feedId: visitStats.feedId,
+                    pv: visitStats.pv,
+                    hllData: visitStats.hllData,
+                }).from(visitStats).where(inArray(visitStats.feedId, feedIds)),
+                db.select({
+                    feedId: comments.feedId,
+                    count: count(),
+                })
+                    .from(comments)
+                    .where(and(inArray(comments.feedId, feedIds), isNull(comments.deletedAt)))
+                    .groupBy(comments.feedId),
+                db.select({
+                    feedId: feedLikes.feedId,
+                    count: count(),
+                })
+                    .from(feedLikes)
+                    .where(inArray(feedLikes.feedId, feedIds))
+                    .groupBy(feedLikes.feedId),
+                db.select({
+                    feedId: feedBookmarks.feedId,
+                    count: count(),
+                })
+                    .from(feedBookmarks)
+                    .where(inArray(feedBookmarks.feedId, feedIds))
+                    .groupBy(feedBookmarks.feedId),
+            ]));
+
+            const statsMap = new Map(statsRows.map((row) => [row.feedId, row]));
+            const commentCountMap = new Map(commentRows.map((row) => [row.feedId, Number(row.count) || 0]));
+            const likeCountMap = new Map(likeRows.map((row) => [row.feedId, Number(row.count) || 0]));
+            const bookmarkCountMap = new Map(bookmarkRows.map((row) => [row.feedId, Number(row.count) || 0]));
+            dataList = feed_list.map((feed: any) => {
+                const stats = statsMap.get(Number(feed.id));
+                return {
+                    ...feed,
+                    pv: stats?.pv ?? 0,
+                    uv: estimateUv(stats?.hllData),
+                    commentCount: commentCountMap.get(Number(feed.id)) ?? 0,
+                    likeCount: likeCountMap.get(Number(feed.id)) ?? 0,
+                    bookmarkCount: bookmarkCountMap.get(Number(feed.id)) ?? 0,
+                };
+            });
+        }
+
+        const data = { size: size[0].count, data: dataList, hasNext };
 
         if (sort !== 'popular' && (type === undefined || type === 'normal' || type === '')) {
             await profileAsync(c, 'feed_list_cache_set', () => cache.set(cacheKey, data));

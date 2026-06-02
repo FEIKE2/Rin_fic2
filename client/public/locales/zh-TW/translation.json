@@ -193,7 +193,14 @@
   "feed_card": {
     "published$time": "{{time}} 發布",
     "updated$time": "{{time}} 更新",
-    "edited$time": "最後編輯於 {{time}}"
+    "edited$time": "最後編輯於 {{time}}",
+    "stats": {
+      "views": "瀏覽量",
+      "visitors": "訪客量",
+      "comments": "留言數",
+      "likes": "按讚數",
+      "bookmarks": "收藏數"
+    }
   },
   "footer": {
     "rss": "RSS 訂閱連結"

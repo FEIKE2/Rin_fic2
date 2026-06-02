@@ -5,6 +5,7 @@ import type { Variables } from "../../core/hono-types";
 import { setupTestApp, createTestUser, cleanupTestDB } from '../../../tests/fixtures';
 import type { Database } from 'bun:sqlite';
 import type { TestCacheImpl } from '../../../tests/fixtures';
+import { HyperLogLog } from '../../utils/hyperloglog';
 
 describe('FeedService', () => {
     let db: any;
@@ -76,6 +77,57 @@ describe('FeedService', () => {
             const data = await listRes.json() as any;
             expect(data.size).toBe(2);
             expect(data.data).toBeArray();
+        });
+
+        it('should include visit and comment stats in feed list items', async () => {
+            const createRes = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Stats Feed',
+                    content: 'Stats Content',
+                    listed: true,
+                    draft: false,
+                    tags: [],
+                }),
+            }, env);
+
+            const createData = await createRes.json() as any;
+            const hll = new HyperLogLog();
+            hll.add('192.0.2.1');
+            hll.add('192.0.2.2');
+            hll.add('192.0.2.1');
+
+            sqlite.prepare(`INSERT INTO visit_stats (feed_id, pv, hll_data) VALUES (?, ?, ?)`)
+                .run(createData.insertedId, 12, hll.serialize());
+            sqlite.exec(`
+                INSERT INTO users (id, username, avatar, openid, permission) VALUES
+                    (2, 'liker', 'liker.png', 'gh_liker', 0),
+                    (3, 'reader', 'reader.png', 'gh_reader', 0);
+                INSERT INTO comments (feed_id, parent_id, user_id, content, deleted_at) VALUES
+                    (${createData.insertedId}, NULL, 1, 'Main comment', NULL),
+                    (${createData.insertedId}, 1, 1, 'Reply comment', NULL),
+                    (${createData.insertedId}, NULL, 1, 'Deleted comment', unixepoch());
+                INSERT INTO feed_likes (feed_id, user_id) VALUES
+                    (${createData.insertedId}, 1),
+                    (${createData.insertedId}, 2);
+                INSERT INTO feed_bookmarks (feed_id, user_id) VALUES
+                    (${createData.insertedId}, 3)
+            `);
+
+            const res = await app.request('/?page=1&limit=10', { method: 'GET' }, env);
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            const item = data.data.find((feed: any) => feed.id === createData.insertedId);
+            expect(item.pv).toBe(12);
+            expect(item.uv).toBeGreaterThanOrEqual(2);
+            expect(item.commentCount).toBe(2);
+            expect(item.likeCount).toBe(2);
+            expect(item.bookmarkCount).toBe(1);
         });
 
         it('should return empty list when no feeds exist', async () => {

@@ -46,6 +46,10 @@ function FeedCardImage({ src }: { src: string }) {
     );
 }
 
+function formatStatValue(value: number) {
+    return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
 export type FeedCardProps = {
     id: string;
     avatar?: string;
@@ -61,10 +65,15 @@ export type FeedCardProps = {
     variant?: FeedCardVariant;
     loginRequired?: number;
     hotScore?: number;
+    pv?: number;
+    uv?: number;
+    commentCount?: number;
+    likeCount?: number;
+    bookmarkCount?: number;
     user?: { username?: string };
 };
 
-export function FeedCard({ id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, preview = false, variant, loginRequired, hotScore, user }: FeedCardProps) {
+export function FeedCard({ id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, preview = false, variant, loginRequired, hotScore, pv, uv, commentCount, likeCount, bookmarkCount, user }: FeedCardProps) {
     const { t } = useTranslation();
     const siteConfig = useSiteConfig();
     const profile = useContext(ProfileContext);
@@ -76,6 +85,14 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
     const hotBadge = profile?.permission && typeof hotScore === "number"
         ? <span className="text-orange-500"><i className="ri-fire-line" /> {Math.round(hotScore)}</span>
         : null;
+    const hasStats = [pv, uv, commentCount, likeCount, bookmarkCount].some((value) => typeof value === "number");
+    const stats = [
+        { icon: "ri-eye-line", label: t("feed_card.stats.views"), value: pv ?? 0 },
+        { icon: "ri-user-line", label: t("feed_card.stats.visitors"), value: uv ?? 0 },
+        { icon: "ri-chat-1-line", label: t("feed_card.stats.comments"), value: commentCount ?? 0 },
+        { icon: "ri-heart-line", label: t("feed_card.stats.likes"), value: likeCount ?? 0 },
+        { icon: "ri-bookmark-line", label: t("feed_card.stats.bookmarks"), value: bookmarkCount ?? 0 },
+    ];
 
     const lockedNote = (
         <p className="mt-2 text-sm italic text-neutral-500 dark:text-neutral-400">{t("visible.login_only")}</p>
@@ -126,6 +143,17 @@ export function FeedCard({ id, title, avatar, draft, listed, top, summary, hasht
             {hashtags.length > 0 && (
                 <div className="flex flex-row flex-wrap justify-start gap-2 mt-2 gap-x-2">
                     {hashtags.map(({ name }, index) => <HashTag key={index} name={name} />)}
+                </div>
+            )}
+            {hasStats && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-black/5 pt-3 text-xs text-gray-400 dark:border-white/10 dark:text-neutral-500">
+                    {stats.map(({ icon, label, value }) => (
+                        <span key={label} className="inline-flex items-center gap-1.5" title={`${label}: ${value}`}>
+                            <i className={icon} aria-hidden="true" />
+                            <span>{label}</span>
+                            <span className="font-medium text-gray-500 dark:text-neutral-400">{formatStatValue(value)}</span>
+                        </span>
+                    ))}
                 </div>
             )}
         </div>

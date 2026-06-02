@@ -193,7 +193,14 @@
   "feed_card": {
     "published$time": "{{time}} に公開",
     "updated$time": "{{time}} に更新",
-    "edited$time": "最終編集: {{time}}"
+    "edited$time": "最終編集: {{time}}",
+    "stats": {
+      "views": "閲覧数",
+      "visitors": "訪問者数",
+      "comments": "コメント数",
+      "likes": "いいね数",
+      "bookmarks": "ブックマーク数"
+    }
   },
   "footer": {
     "rss": "RSS 購読リンク"

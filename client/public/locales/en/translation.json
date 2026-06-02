@@ -193,7 +193,14 @@
   "feed_card": {
     "published$time": "Published at {{time}}",
     "updated$time": "Updated at {{time}}",
-    "edited$time": "Last edited {{time}}"
+    "edited$time": "Last edited {{time}}",
+    "stats": {
+      "views": "Views",
+      "visitors": "Visitors",
+      "comments": "Comments",
+      "likes": "Likes",
+      "bookmarks": "Bookmarks"
+    }
   },
   "footer": {
     "rss": "RSS Subscription Link"
