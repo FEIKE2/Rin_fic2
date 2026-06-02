@@ -8,6 +8,10 @@ import { useAlert } from "./dialog";
 import { useColorMode } from "../utils/darkModeUtils";
 import { buildMarkdownFile, buildMarkdownImage, uploadAttachmentFile, uploadImageFile } from "../utils/image-upload";
 import { Markdown } from "./markdown";
+import { ClientConfigContext } from "../state/config";
+import { ProfileContext } from "../state/profile";
+import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
+import { MAINTENANCE_MESSAGE } from "@rin/config";
 
 
 interface MarkdownEditorProps {
@@ -20,12 +24,15 @@ interface MarkdownEditorProps {
 
 export function MarkdownEditor({ content, setContent, placeholder = "> Write your content here...", height = "400px", allowFileUpload = false }: MarkdownEditorProps) {
   const { t } = useTranslation();
+  const profile = React.useContext(ProfileContext);
+  const config = React.useContext(ClientConfigContext);
   const colorMode = useColorMode();
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const isComposingRef = useRef(false);
   const [preview, setPreview] = useState<'edit' | 'preview' | 'comparison'>('edit');
   const [uploading, setUploading] = useState(false);
   const { showAlert, AlertUI } = useAlert();
+  const uploadBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.uploadDisabled);
 
   async function insertImage(
     file: File,
@@ -46,7 +53,7 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
       }]);
     } catch (error) {
       console.error(error);
-      showAlert(error instanceof Error ? error.message : t("upload.failed"));
+      showAlert(humanizeUploadError(error));
     }
   }
 
@@ -56,6 +63,7 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
     if (message === "File size limit exceeded") return t("upload.file.size_limit_exceeded");
     if (message === "Unknown file attachment") return t("upload.file.unknown_attachment");
     if (message === "Invalid file attachment") return t("upload.file.invalid_attachment");
+    if (message === MAINTENANCE_MESSAGE) return t("maintenance.unavailable");
     return message;
   }
 
@@ -69,7 +77,7 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
 
   const handlePaste = async (event: React.ClipboardEvent<HTMLDivElement>) => {
     const clipboardData = event.clipboardData;
-    if (clipboardData.files.length === 1) {
+    if (!uploadBlocked && clipboardData.files.length === 1) {
       const editor = editorRef.current;
       if (!editor) return;
       editor.trigger(undefined, "undo", undefined);
@@ -218,8 +226,8 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
         <FlatTabButton active={preview === 'preview'} onClick={() => setPreview('preview')}> {t("preview")} </FlatTabButton>
         <FlatTabButton active={preview === 'comparison'} onClick={() => setPreview('comparison')}> {t("comparison")} </FlatTabButton>
         <div className="flex-grow" />
-        <UploadImageButton />
-        {allowFileUpload && <UploadFileButton />}
+        {!uploadBlocked && <UploadImageButton />}
+        {!uploadBlocked && allowFileUpload && <UploadFileButton />}
         {uploading &&
           <div className="flex flex-row items-center space-x-2">
             <Loading type="spin" color="#FC466B" height={16} width={16} />
@@ -233,6 +241,7 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
             className={"relative min-h-0 overflow-hidden rounded-none border-0 bg-w"}
             onDrop={(e) => {
               e.preventDefault();
+              if (uploadBlocked) return;
               const editor = editorRef.current;
               if (!editor) return;
               for (let i = 0; i < e.dataTransfer.files.length; i++) {

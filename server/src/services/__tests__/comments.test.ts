@@ -4,12 +4,14 @@ import { Hono } from "hono";
 import type { Variables } from "../../core/hono-types";
 import { setupTestApp, cleanupTestDB } from '../../../tests/fixtures';
 import type { Database } from 'bun:sqlite';
+import type { TestCacheImpl } from '../../../tests/fixtures';
 
 describe('CommentService', () => {
     let db: any;
     let sqlite: Database;
     let env: Env;
     let app: Hono<{ Bindings: Env; Variables: Variables }>;
+    let clientConfig: TestCacheImpl;
     const originalFetch = globalThis.fetch;
 
     beforeEach(async () => {
@@ -18,6 +20,7 @@ describe('CommentService', () => {
         sqlite = ctx.sqlite;
         env = ctx.env;
         app = ctx.app;
+        clientConfig = ctx.clientConfig;
         
         // Seed test data
         await seedTestData(sqlite);
@@ -359,6 +362,50 @@ describe('CommentService', () => {
             expect(await res.text()).toContain('Draft comments are disabled');
         });
 
+        it('should reject non-admin comments while comment maintenance is enabled', async () => {
+            await clientConfig.set('maintenance.comment_disabled', true);
+
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Blocked comment' }),
+            }, env);
+
+            expect(res.status).toBe(503);
+            expect(await res.text()).toBe('该功能维护中……');
+        });
+
+        it('should reject guest comments while comment maintenance is enabled', async () => {
+            await clientConfig.set('maintenance.comment_disabled', true);
+
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: 'Blocked guest comment', guestName: 'Visitor' }),
+            }, env);
+
+            expect(res.status).toBe(503);
+            expect(await res.text()).toBe('该功能维护中……');
+        });
+
+        it('should allow admin comments while comment maintenance is enabled', async () => {
+            await clientConfig.set('maintenance.comment_disabled', true);
+
+            const res = await app.request('/1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_3',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: 'Admin comment' }),
+            }, env);
+
+            expect(res.status).toBe(200);
+        });
+
         it('should still create the comment when webhook delivery fails', async () => {
             env.WEBHOOK_URL = 'not-a-valid-url' as any;
             globalThis.fetch = mock(async () => {
@@ -400,6 +447,19 @@ describe('CommentService', () => {
             expect(unlikeRes.status).toBe(200);
             expect(await unlikeRes.json() as any).toEqual({ liked: false });
             expect((sqlite.prepare(`SELECT like_count FROM comments WHERE id = 1`).get() as any).like_count).toBe(0);
+        });
+
+        it('should allow liking comments while comment maintenance is enabled', async () => {
+            await clientConfig.set('maintenance.comment_disabled', true);
+
+            const likeRes = await app.request('/1/like', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer mock_token_1' },
+            }, env);
+
+            expect(likeRes.status).toBe(200);
+            const body = await likeRes.json() as any;
+            expect(body).toEqual({ liked: true });
         });
 
         it('should require authentication to like a comment', async () => {

@@ -1,12 +1,14 @@
 import { Hono } from "hono";
 import type { AppContext } from "../core/hono-types";
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { MAINTENANCE_CONFIG_KEYS } from "@rin/config";
 import { commentLikes, comments, feeds, users } from "../db/schema";
 import { profileAsync } from "../core/server-timing";
 import { notify } from "../utils/webhook";
 import { resolveWebhookConfig } from "./config-helpers";
 import { adjustFeedDynamicHotScore, getHotConfig } from "./hot-score";
 import { extractRinFileUrls } from "./file-attachments";
+import { isMaintenanceEnabled, MAINTENANCE_MESSAGE } from "./maintenance";
 
 export function CommentService(): Hono {
     const app = new Hono();
@@ -140,8 +142,15 @@ export function CommentService(): Hono {
         const db = c.get('db');
         const env = c.get('env');
         const serverConfig = c.get('serverConfig');
+        const clientConfig = c.get('clientConfig');
         const uid = c.get('uid');
+        const admin = c.get('admin');
         const feedId = parseInt(c.req.param('feed'));
+        if (!admin && await profileAsync(c, 'comment_create_maintenance_check', () =>
+            isMaintenanceEnabled(clientConfig, MAINTENANCE_CONFIG_KEYS.commentDisabled)
+        )) {
+            return c.text(MAINTENANCE_MESSAGE, 503);
+        }
         const body = await profileAsync(c, 'comment_create_parse', () => c.req.json());
         const { content, guestName, guestContact } = body;
         let parentId = body.parentId ? Number(body.parentId) : null;

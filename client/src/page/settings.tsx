@@ -19,6 +19,7 @@ import { FeedCardPreview } from "../components/feed-card-preview";
 import { FEED_LAYOUT_OPTIONS, normalizeFeedLayout } from "../components/feed-layout-options";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 import { applyThemeColor, normalizeThemeColor } from "../utils/theme-color";
+import { MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
 import { AISummarySettings } from "./settings-ai";
 import { ItemButton, ItemImageInput, ItemInput, ItemSwitch, ItemTitle, ItemWithUpload } from "./settings-items";
 import {
@@ -651,6 +652,30 @@ export function Settings() {
           ))}
 
           <ItemTitle title={t("settings.maintenance.title")} />
+          <ItemSwitch
+            title={t("settings.maintenance.posting.title")}
+            description={t("settings.maintenance.posting.desc")}
+            checked={clientConfig.getBoolean(MAINTENANCE_CONFIG_KEYS.postingDisabled)}
+            onChange={(checked) => {
+              setConfigValue("client", MAINTENANCE_CONFIG_KEYS.postingDisabled, checked);
+            }}
+          />
+          <ItemSwitch
+            title={t("settings.maintenance.upload.title")}
+            description={t("settings.maintenance.upload.desc")}
+            checked={clientConfig.getBoolean(MAINTENANCE_CONFIG_KEYS.uploadDisabled)}
+            onChange={(checked) => {
+              setConfigValue("client", MAINTENANCE_CONFIG_KEYS.uploadDisabled, checked);
+            }}
+          />
+          <ItemSwitch
+            title={t("settings.maintenance.comment.title")}
+            description={t("settings.maintenance.comment.desc")}
+            checked={clientConfig.getBoolean(MAINTENANCE_CONFIG_KEYS.commentDisabled)}
+            onChange={(checked) => {
+              setConfigValue("client", MAINTENANCE_CONFIG_KEYS.commentDisabled, checked);
+            }}
+          />
           <ItemSwitch
             title={t("settings.cache.enabled.title")}
             description={t("settings.cache.enabled.desc")}

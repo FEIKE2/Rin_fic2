@@ -324,6 +324,50 @@ describe('FeedService', () => {
             expect(res.status).toBe(401);
         });
 
+        it('should reject non-admin feed creation while posting maintenance is enabled', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+            await clientConfig.set('maintenance.posting_disabled', true);
+
+            const res = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Blocked Feed',
+                    content: 'Blocked Content',
+                    tags: [],
+                    draft: false,
+                    listed: true,
+                }),
+            }, env);
+
+            expect(res.status).toBe(503);
+            expect(await res.text()).toBe('该功能维护中……');
+        });
+
+        it('should allow admin feed creation while posting maintenance is enabled', async () => {
+            await clientConfig.set('maintenance.posting_disabled', true);
+
+            const res = await app.request('/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_1',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Admin Feed',
+                    content: 'Admin Content',
+                    tags: [],
+                    draft: false,
+                    listed: true,
+                }),
+            }, env);
+
+            expect(res.status).toBe(200);
+        });
+
         it('should require title', async () => {
             const res = await app.request('/', {
                 method: 'POST',
@@ -522,6 +566,28 @@ describe('FeedService', () => {
             expect(row.top).toBe(0);
             expect(row.title).toBe('Updated Author Feed');
         });
+
+        it('should reject non-admin author updates while posting maintenance is enabled', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+            sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (20, 'Author Feed', 'Content', 2, 0, 1)`);
+            await clientConfig.set('maintenance.posting_disabled', true);
+
+            const updateRes = await app.request('/20', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer mock_token_2',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: 'Blocked Update',
+                }),
+            }, env);
+
+            expect(updateRes.status).toBe(503);
+            expect(await updateRes.text()).toBe('该功能维护中……');
+            const row = sqlite.prepare(`SELECT title FROM feeds WHERE id = 20`).get() as any;
+            expect(row.title).toBe('Author Feed');
+        });
     });
 
     describe('POST /top/:id - Set top', () => {
@@ -611,6 +677,21 @@ describe('FeedService', () => {
             }, env);
 
             expect(res.status).toBe(404);
+        });
+
+        it('should reject non-admin author deletes while posting maintenance is enabled', async () => {
+            sqlite.exec(`INSERT INTO users (id, username, avatar, openid, permission) VALUES (2, 'author', 'author.png', 'gh_author', 0)`);
+            sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (30, 'Author Feed', 'Content', 2, 0, 1)`);
+            await clientConfig.set('maintenance.posting_disabled', true);
+
+            const deleteRes = await app.request('/30', {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer mock_token_2' },
+            }, env);
+
+            expect(deleteRes.status).toBe(503);
+            expect(await deleteRes.text()).toBe('该功能维护中……');
+            expect(sqlite.prepare(`SELECT id FROM feeds WHERE id = 30`).get()).not.toBeNull();
         });
     });
 });

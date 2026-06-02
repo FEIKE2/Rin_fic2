@@ -32,6 +32,8 @@ import { WritingPage } from "../page/writing";
 import { ProfileContext } from "../state/profile";
 import { tryInt } from "../utils/int";
 import { useTranslation } from "react-i18next";
+import { ClientConfigContext } from "../state/config";
+import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
 
 export function AppRoutes() {
   const { t } = useTranslation();
@@ -83,11 +85,11 @@ export function AppRoutes() {
       </AdminRoute>
 
       {/* 所有登录用户都可以写文章 */}
-      <AdminRoute path="/admin/writing" requireLogin title={t("writing_upload")} sectionTitle={t("writing")} description={t("admin.writing_description")}>
+      <AdminRoute path="/admin/writing" requireLogin title={t("writing_upload")} sectionTitle={t("writing")} description={t("admin.writing_description")} maintenanceKey={MAINTENANCE_CONFIG_KEYS.postingDisabled}>
         <WritingPage />
       </AdminRoute>
 
-      <AdminRoute path="/admin/writing/:id" requireLogin title={t("writing_upload")} sectionTitle={t("writing")} description={t("admin.writing_description")}>
+      <AdminRoute path="/admin/writing/:id" requireLogin title={t("writing_upload")} sectionTitle={t("writing")} description={t("admin.writing_description")} maintenanceKey={MAINTENANCE_CONFIG_KEYS.postingDisabled}>
         {({ id }) => <WritingPage id={tryInt(0, id)} />}
       </AdminRoute>
 
@@ -193,6 +195,7 @@ function AdminRoute({
   title,
   sectionTitle,
   description,
+  maintenanceKey,
 }: {
   path: PathPattern;
   children: ReactNode | ((params: DefaultParams) => ReactNode);
@@ -201,8 +204,10 @@ function AdminRoute({
   title: string;
   sectionTitle?: string;
   description: string;
+  maintenanceKey?: string;
 }) {
   const profile = useContext(ProfileContext);
+  const config = useContext(ClientConfigContext);
   const { t } = useTranslation();
   
   // 检查权限：requirePermission 需要管理员，requireLogin 只需要登录
@@ -211,6 +216,8 @@ function AdminRoute({
     content = <ErrorPage error={t("error.permission_denied")} />;
   } else if (requireLogin && !profile) {
     content = <ErrorPage error={t("error.login_required")} />;
+  } else if (maintenanceKey && isMaintenanceBlocked(profile, config, maintenanceKey)) {
+    content = <ErrorPage error={t("maintenance.unavailable")} />;
   }
 
   return (

@@ -1,4 +1,5 @@
 import i18n from 'i18next';
+import { MAINTENANCE_MESSAGE } from '@rin/config';
 import _ from 'lodash';
 import {useCallback, useContext, useEffect, useState} from "react";
 import {Helmet} from "react-helmet";
@@ -23,6 +24,7 @@ function humanizeFeedError(value: string) {
   if (value === "File size limit exceeded") return i18n.t("upload.file.size_limit_exceeded");
   if (value === "Unknown file attachment") return i18n.t("upload.file.unknown_attachment");
   if (value === "Invalid file attachment") return i18n.t("upload.file.invalid_attachment");
+  if (value === MAINTENANCE_MESSAGE) return i18n.t("maintenance.unavailable");
   return value;
 }
 

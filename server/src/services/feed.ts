@@ -10,6 +10,8 @@ import { bindTagToPost, normalizeTags, TagLimitError } from "./tag";
 import { clearFeedCache } from "./clear-feed-cache";
 import { adjustFeedDynamicHotScore, getHotConfig, updateFeedContentHotScore } from "./hot-score";
 import { enforceFileAttachmentLimits, FileAttachmentLimitError } from "./file-attachments";
+import { MAINTENANCE_CONFIG_KEYS } from "@rin/config";
+import { isMaintenanceEnabled, MAINTENANCE_MESSAGE } from "./maintenance";
 export { clearFeedCache } from "./clear-feed-cache";
 
 // Lazy-loaded modules for WordPress import
@@ -136,6 +138,7 @@ export function FeedService(): Hono<{
         const db = c.get('db');
         const cache = c.get('cache');
         const serverConfig = c.get('serverConfig');
+        const clientConfig = c.get('clientConfig');
         const env = c.get('env');
         const admin = c.get('admin');
         const uid = c.get('uid');
@@ -145,6 +148,11 @@ export function FeedService(): Hono<{
         // 允许所有登录用户创建文章
         if (!uid) {
             return c.text('Authentication required', 401);
+        }
+        if (!admin && await profileAsync(c, 'feed_create_maintenance_check', () =>
+            isMaintenanceEnabled(clientConfig, MAINTENANCE_CONFIG_KEYS.postingDisabled)
+        )) {
+            return c.text(MAINTENANCE_MESSAGE, 503);
         }
 
         if (!title) {
@@ -436,6 +444,7 @@ export function FeedService(): Hono<{
         const db = c.get('db');
         const cache = c.get('cache');
         const serverConfig = c.get('serverConfig');
+        const clientConfig = c.get('clientConfig');
         const env = c.get('env');
         const admin = c.get('admin');
         const uid = c.get('uid');
@@ -452,6 +461,11 @@ export function FeedService(): Hono<{
 
         if (feed.uid !== uid && !admin) {
             return c.text('Permission denied', 403);
+        }
+        if (!admin && await profileAsync(c, 'feed_update_maintenance_check', () =>
+            isMaintenanceEnabled(clientConfig, MAINTENANCE_CONFIG_KEYS.postingDisabled)
+        )) {
+            return c.text(MAINTENANCE_MESSAGE, 503);
         }
 
         let normalizedTags: string[] | undefined;
@@ -564,6 +578,7 @@ export function FeedService(): Hono<{
     app.delete('/:id', async (c) => {
         const db = c.get('db');
         const cache = c.get('cache');
+        const clientConfig = c.get('clientConfig');
         const admin = c.get('admin');
         const uid = c.get('uid');
         const id = c.req.param('id');
@@ -577,6 +592,11 @@ export function FeedService(): Hono<{
 
         if (feed.uid !== uid && !admin) {
             return c.text('Permission denied', 403);
+        }
+        if (!admin && await profileAsync(c, 'feed_delete_maintenance_check', () =>
+            isMaintenanceEnabled(clientConfig, MAINTENANCE_CONFIG_KEYS.postingDisabled)
+        )) {
+            return c.text(MAINTENANCE_MESSAGE, 503);
         }
 
         await profileAsync(c, 'feed_delete_db', () => db.delete(feeds).where(eq(feeds.id, id_num)));

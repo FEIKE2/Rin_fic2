@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
+import { MAINTENANCE_CONFIG_KEYS } from "@rin/config";
 import type { AppContext } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
 import { deleteStorageObject, getStorageObject, putStorageObject } from "../utils/storage";
 import { uploads } from "../db/schema";
 import { enforceFileAttachmentLimits, FileAttachmentLimitError } from "./file-attachments";
 import { findDanglingUploads } from "./image-recycling";
+import { isMaintenanceEnabled, MAINTENANCE_MESSAGE } from "./maintenance";
 
 function buf2hex(buffer: ArrayBuffer) {
     return [...new Uint8Array(buffer)]
@@ -23,16 +25,23 @@ export function StorageService(): Hono {
         const db = c.get('db');
         const admin = c.get('admin');
         const serverConfig = c.get('serverConfig');
+        const clientConfig = c.get('clientConfig');
         
+        if (!uid) {
+            return c.text('Unauthorized', 401);
+        }
+        if (!admin && await profileAsync(c, 'storage_maintenance_check', () =>
+            isMaintenanceEnabled(clientConfig, MAINTENANCE_CONFIG_KEYS.uploadDisabled)
+        )) {
+            return c.text(MAINTENANCE_MESSAGE, 503);
+        }
+
         const body = await profileAsync(c, 'storage_parse', () => c.req.parseBody());
         const key = (body.key as string) || "";
         const file = body.file as File;
         const kind = body.kind === "file" ? "file" : "image";
         const content = typeof body.content === "string" ? body.content : "";
-        
-        if (!uid) {
-            return c.text('Unauthorized', 401);
-        }
+
         if (!file) {
             return c.text("No file uploaded", 400);
         }

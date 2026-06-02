@@ -7,6 +7,7 @@ import { client } from "../../../app/runtime";
 import { ClientConfigContext } from "../../../state/config";
 import { type Profile } from "../../../state/profile";
 import { removeAuthToken } from "../../../utils/auth";
+import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../../../utils/maintenance";
 import { Button } from "../../button";
 import { Input } from "../../input";
 import { HEADER_POPUP_PANEL_CLASS } from "../shared";
@@ -163,6 +164,7 @@ export function UserAvatar({
   const [hasBookmarks, setHasBookmarks] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
   const shouldShowEntry = Boolean(profile) || config.getBoolean("login.enabled");
+  const postingBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.postingDisabled);
 
   useEffect(() => {
     if (profile && !profile.permission) {
@@ -231,17 +233,18 @@ export function UserAvatar({
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">{t("profile.title")}</p>
               </div>
             </button>
-            {/* 所有登录用户都可以发布内容 */}
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                setLocation("/admin/writing");
-              }}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              <i className="ri-edit-line" />
-              <span>{profile.permission ? t("writing") : t("writing_upload")}</span>
-            </button>
+            {!postingBlocked ? (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setLocation("/admin/writing");
+                }}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                <i className="ri-edit-line" />
+                <span>{profile.permission ? t("writing") : t("writing_upload")}</span>
+              </button>
+            ) : null}
             {draftCount > 0 && (
               <button
                 onClick={() => { setIsOpen(false); setLocation("/?type=draft"); }}

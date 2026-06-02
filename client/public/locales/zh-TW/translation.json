@@ -258,6 +258,9 @@
     "total$count_one": "{{count}} 條動態",
     "total$count_other": "{{count}} 條動態"
   },
+  "maintenance": {
+    "unavailable": "該功能維護中……"
+  },
   "next": "下一頁",
   "previous_post": "該作者的上一篇",
   "next_post": "該作者的下一篇",
@@ -387,7 +390,19 @@
       }
     },
     "maintenance": {
-      "title": "維護"
+      "title": "維護",
+      "posting": {
+        "title": "凍結非管理員發帖",
+        "desc": "開啟後，非管理員無法建立、編輯或刪除自己的帖文；管理員不受影響。"
+      },
+      "upload": {
+        "title": "凍結非管理員上傳",
+        "desc": "開啟後，非管理員無法上傳圖片或檔案；管理員不受影響。"
+      },
+      "comment": {
+        "title": "凍結非管理員評論",
+        "desc": "開啟後，非管理員和訪客無法發表評論或回覆；點讚不受影響。"
+      }
     },
     "friend": {
       "apply": {

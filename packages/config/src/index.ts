@@ -1,6 +1,12 @@
 import type { AIConfig } from "@rin/api";
 
 export const WEBHOOK_URL_KEY = "WEBHOOK_URL";
+export const MAINTENANCE_MESSAGE = "该功能维护中……";
+export const MAINTENANCE_CONFIG_KEYS = {
+  postingDisabled: "maintenance.posting_disabled",
+  uploadDisabled: "maintenance.upload_disabled",
+  commentDisabled: "maintenance.comment_disabled",
+} as const;
 
 export const CLIENT_CONFIG_DEFAULTS = new Map(
   Object.entries({
@@ -14,6 +20,9 @@ export const CLIENT_CONFIG_DEFAULTS = new Map(
     "theme.color": "#fc466b",
     "comment.enabled": true,
     "comment.guest.enabled": false,
+    [MAINTENANCE_CONFIG_KEYS.postingDisabled]: false,
+    [MAINTENANCE_CONFIG_KEYS.uploadDisabled]: false,
+    [MAINTENANCE_CONFIG_KEYS.commentDisabled]: false,
     "login.enabled": true,
     "site.name": "Rin",
     "site.description": "A lightweight personal blogging system",

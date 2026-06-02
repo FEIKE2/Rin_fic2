@@ -108,13 +108,13 @@ describe('StorageService', () => {
         `);
     }
 
-    function createAppWithEnv(appEnv: Env, uid?: number, admin = false) {
+    function createAppWithEnv(appEnv: Env, uid?: number, admin = false, clientConfig = new TestCacheImpl()) {
         const serviceApp = new Hono<{ Bindings: Env; Variables: Variables }>();
         serviceApp.use(createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
             c.set('db', db);
             c.set('cache', new TestCacheImpl());
             c.set('serverConfig', new TestCacheImpl());
-            c.set('clientConfig', new TestCacheImpl());
+            c.set('clientConfig', clientConfig);
             c.set('jwt', {
                 sign: async (payload: any) => `mock_token_${payload.id}`,
                 verify: async (token: string) => token.startsWith('mock_token_') ? { id: 1 } : null,
@@ -142,6 +142,22 @@ describe('StorageService', () => {
             // Could be 400 (validation) or 401 (auth)
             expect(res.status).toBeGreaterThanOrEqual(400);
             expect(res.status).toBeLessThanOrEqual(401);
+        });
+
+        it('should reject non-admin uploads while upload maintenance is enabled', async () => {
+            const clientConfig = new TestCacheImpl();
+            await clientConfig.set('maintenance.upload_disabled', true);
+            const maintenanceApp = createAppWithEnv(env, 1, false, clientConfig);
+            const formData = new FormData();
+            formData.append('file', new File(['test content'], 'test.txt', { type: 'text/plain' }));
+
+            const res = await maintenanceApp.request('/', {
+                method: 'POST',
+                body: formData,
+            }, env);
+
+            expect(res.status).toBe(503);
+            expect(await res.text()).toBe('该功能维护中……');
         });
 
         it('should upload through R2 binding when configured', async () => {

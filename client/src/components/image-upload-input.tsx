@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactLoading from "react-loading";
 import {
@@ -6,6 +6,10 @@ import {
   isImageFile,
   uploadImageFile,
 } from "../utils/image-upload";
+import { ClientConfigContext } from "../state/config";
+import { ProfileContext } from "../state/profile";
+import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
+import { MAINTENANCE_MESSAGE } from "@rin/config";
 
 type ImageUploadInputProps = {
   value: string;
@@ -30,14 +34,22 @@ export function ImageUploadInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const profile = useContext(ProfileContext);
+  const config = useContext(ClientConfigContext);
+  const uploadBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.uploadDisabled);
 
   const shapeClass = shape === "circle" ? "rounded-full" : "rounded-2xl";
 
   const showError = (message: string) => {
-    onError?.(message || t("upload.failed"));
+    onError?.(message === MAINTENANCE_MESSAGE ? t("maintenance.unavailable") : message || t("upload.failed"));
   };
 
   const handleFile = async (file: File) => {
+    if (uploadBlocked) {
+      showError(t("maintenance.unavailable"));
+      return;
+    }
+
     if (!isImageFile(file)) {
       showError(t("upload.image.invalid_type"));
       return;
@@ -93,15 +105,17 @@ export function ImageUploadInput({
           />
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={disabled || uploading}
-              onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-w px-3 py-2 text-sm t-primary transition-colors hover:border-black/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:border-white/20"
-            >
-              <i className="ri-upload-2-line" aria-hidden="true" />
-              <span>{uploading ? t("uploading") : t("upload.title")}</span>
-            </button>
+            {!uploadBlocked && (
+              <button
+                type="button"
+                disabled={disabled || uploading}
+                onClick={() => inputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-w px-3 py-2 text-sm t-primary transition-colors hover:border-black/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:border-white/20"
+              >
+                <i className="ri-upload-2-line" aria-hidden="true" />
+                <span>{uploading ? t("uploading") : t("upload.title")}</span>
+              </button>
+            )}
             <button
               type="button"
               disabled={disabled || uploading || value.length === 0}
@@ -115,51 +129,53 @@ export function ImageUploadInput({
         </div>
       </div>
 
-      <div
-        className={`rounded-2xl border-2 border-dashed px-4 py-5 text-center transition-colors ${
-          dragging
-            ? "border-theme bg-theme/5"
-            : "border-black/10 bg-black/[0.02] dark:border-white/10 dark:bg-white/[0.03]"
-        }`}
-        onClick={() => {
-          if (!disabled && !uploading) {
-            inputRef.current?.click();
-          }
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          if (!disabled && !uploading) {
-            setDragging(true);
-          }
-        }}
-        onDragLeave={(event) => {
-          event.preventDefault();
-          setDragging(false);
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          if (disabled || uploading) {
-            return;
-          }
-          const file = event.dataTransfer.files?.[0];
-          if (file) {
-            void handleFile(file);
-          }
-        }}
-      >
-        <p className="text-sm font-medium t-primary">
-          {dragging ? t("upload.image.drop_now") : t("upload.image.drag_drop")}
-        </p>
-        <p className="mt-1 text-xs t-secondary">{t("upload.image.drag_hint")}</p>
-      </div>
+      {!uploadBlocked && (
+        <div
+          className={`rounded-2xl border-2 border-dashed px-4 py-5 text-center transition-colors ${
+            dragging
+              ? "border-theme bg-theme/5"
+              : "border-black/10 bg-black/[0.02] dark:border-white/10 dark:bg-white/[0.03]"
+          }`}
+          onClick={() => {
+            if (!disabled && !uploading) {
+              inputRef.current?.click();
+            }
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!disabled && !uploading) {
+              setDragging(true);
+            }
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setDragging(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            if (disabled || uploading) {
+              return;
+            }
+            const file = event.dataTransfer.files?.[0];
+            if (file) {
+              void handleFile(file);
+            }
+          }}
+        >
+          <p className="text-sm font-medium t-primary">
+            {dragging ? t("upload.image.drop_now") : t("upload.image.drag_drop")}
+          </p>
+          <p className="mt-1 text-xs t-secondary">{t("upload.image.drag_hint")}</p>
+        </div>
+      )}
 
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        disabled={disabled || uploading}
+        disabled={disabled || uploadBlocked || uploading}
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) {

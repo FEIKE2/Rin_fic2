@@ -3,7 +3,9 @@ import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
 import { useSiteConfig } from "../hooks/useSiteConfig";
+import { ClientConfigContext } from "../state/config";
 import { ProfileContext } from "../state/profile";
+import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
 
 function AdminNavItem({
   href,
@@ -46,7 +48,9 @@ export function AdminLayout({
   const { t } = useTranslation();
   const siteConfig = useSiteConfig();
   const profile = useContext(ProfileContext);
+  const config = useContext(ClientConfigContext);
   const isAdmin = Boolean(profile?.permission);
+  const postingBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.postingDisabled);
   const resolvedSectionTitle = sectionTitle ?? (isAdmin ? t("admin.title") : t("writing"));
 
   return (
@@ -69,7 +73,7 @@ export function AdminLayout({
                 {resolvedSectionTitle}
               </p>
               <div className="mt-3 flex flex-col gap-2">
-                <AdminNavItem href="/admin/writing" icon="ri-quill-pen-line" label={isAdmin ? t("writing") : t("writing_upload")} />
+                {!postingBlocked && <AdminNavItem href="/admin/writing" icon="ri-quill-pen-line" label={isAdmin ? t("writing") : t("writing_upload")} />}
                 {isAdmin && <AdminNavItem href="/admin/settings" icon="ri-settings-3-line" label={t("settings.title")} />}
                 {isAdmin && <AdminNavItem href="/admin/health" icon="ri-heart-pulse-line" label={t("health.title")} />}
                 {isAdmin && <AdminNavItem href="/admin/queue-status" icon="ri-todo-line" label={t("queue_status.title")} />}

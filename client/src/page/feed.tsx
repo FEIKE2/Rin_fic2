@@ -1,4 +1,5 @@
 import type { Comment, Feed, FeedEditHistory } from "@rin/api";
+import { MAINTENANCE_MESSAGE } from "@rin/config";
 import { type ChangeEvent, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
@@ -25,6 +26,7 @@ import { UserAvatarLink } from "../components/user-hover-card";
 import { HEADER_POPUP_PANEL_CLASS } from "../components/site-header/shared";
 import { buildMarkdownImage, generateImageMetadataFromUrl, uploadImageFile } from "../utils/image-upload";
 import { EMOJI_GROUPS } from "../utils/emoji";
+import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
 
 const COMMENT_IMAGE_RE = /!\[[^\]]*\]\([^)]*\)/g;
 const COMMENT_TEXT_LIMIT = 150;
@@ -79,6 +81,7 @@ export function FeedPage({ id, TOC, clean, draftRoute = false }: { id: string, T
   const [top, setTop] = useState<number>(0);
   const config = useContext(ClientConfigContext);
   const counterEnabled = config.getBoolean('counter.enabled');
+  const postingBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.postingDisabled);
   const hasAISummary = Boolean(feed?.ai_summary?.trim());
   const showAISummaryState = feed?.ai_summary_status === "pending" || feed?.ai_summary_status === "processing" || feed?.ai_summary_status === "failed";
 
@@ -316,20 +319,24 @@ export function FeedPage({ id, TOC, clean, draftRoute = false }: { id: string, T
                             <i className="ri-history-line dark:text-neutral-400" />
                           </button>
                         )}
-                        <Link
-                          aria-label={t("edit")}
-                          href={`/admin/writing/${feed.id}`}
-                          className="flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition"
-                        >
-                          <i className="ri-edit-2-line dark:text-neutral-400" />
-                        </Link>
-                        <button
-                          aria-label={t("delete.title")}
-                          onClick={deleteFeed}
-                          className="flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition"
-                        >
-                          <i className="ri-delete-bin-7-line text-red-500" />
-                        </button>
+                        {(profile?.permission || !postingBlocked) && (
+                          <>
+                            <Link
+                              aria-label={t("edit")}
+                              href={`/admin/writing/${feed.id}`}
+                              className="flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition"
+                            >
+                              <i className="ri-edit-2-line dark:text-neutral-400" />
+                            </Link>
+                            <button
+                              aria-label={t("delete.title")}
+                              onClick={deleteFeed}
+                              className="flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition"
+                            >
+                              <i className="ri-delete-bin-7-line text-red-500" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -529,6 +536,7 @@ function CommentInput({
   // guest comments enabled by default; admin can disable via client config `comment.guest.enabled=false`
   const rawGuest = config.get('comment.guest.enabled');
   const guestEnabled = rawGuest !== false && rawGuest !== 'false';
+  const uploadBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.uploadDisabled);
   // 表情工具栏对主评论与回复都显示；插入图片仅主评论显示
   const showImageTool = !parentId;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -547,6 +555,7 @@ function CommentInput({
     else if (error === "Too many images") return t("comment.too_many_images");
     else if (error === "Guest name is required") return t("comment.guest_name_required");
     else if (error === "Parent comment has been deleted") return t("comment.parent_deleted");
+    else if (error === MAINTENANCE_MESSAGE) return t("maintenance.unavailable");
     return error;
   }
 
@@ -579,6 +588,10 @@ function CommentInput({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (uploadBlocked) {
+      showAlert(t("maintenance.unavailable"));
+      return;
+    }
     if (commentImageCount(content) >= 1) {
       showAlert(t("comment.image_limit"));
       return;
@@ -588,7 +601,8 @@ function CommentInput({
       const { url, blurhash, width, height } = await uploadImageFile(file);
       insertImageMarkdown(buildMarkdownImage(file.name, url, { blurhash, width, height }));
     } catch (err) {
-      showAlert((err as Error)?.message || t("comment.too_long"));
+      const message = (err as Error)?.message;
+      showAlert(message === MAINTENANCE_MESSAGE ? t("maintenance.unavailable") : message || t("comment.too_long"));
     } finally {
       setUploading(false);
     }
@@ -735,13 +749,15 @@ function CommentInput({
               >
                 <i className="ri-link" /><span>{t("comment.add_url")}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => { close(); fileInputRef.current?.click(); }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-              >
-                <i className="ri-upload-2-line" /><span>{t("comment.local_upload")}</span>
-              </button>
+              {!uploadBlocked && (
+                <button
+                  type="button"
+                  onClick={() => { close(); fileInputRef.current?.click(); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <i className="ri-upload-2-line" /><span>{t("comment.local_upload")}</span>
+                </button>
+              )}
             </div>
           )) as any}
         </Popup>
@@ -902,6 +918,7 @@ function CommentInput({
 
 function Comments({ id }: { id: string }) {
   const config = useContext(ClientConfigContext);
+  const profile = useContext(ProfileContext);
   const [comments, setComments] = useState<Comment[]>([]);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -913,6 +930,7 @@ function Comments({ id }: { id: string }) {
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
   const { t } = useTranslation();
+  const commentBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.commentDisabled);
 
   const loadedCount = countCommentTree(comments);
   const reachedWindowLimit = loadedCount >= COMMENT_WINDOW_LIMIT;
@@ -994,7 +1012,7 @@ function Comments({ id }: { id: string }) {
     <>
       {config.getBoolean('comment.enabled') &&
         <div className="m-2 flex flex-col justify-center items-center">
-          <CommentInput id={id} onRefresh={reloadComments} />
+          {!commentBlocked && <CommentInput id={id} onRefresh={reloadComments} />}
           {error && (
             <>
               <div className="flex flex-col wauto rounded-2xl bg-w t-primary m-2 p-6 items-center justify-center">
@@ -1070,6 +1088,7 @@ function CommentItem({
   const config = useContext(ClientConfigContext);
   const rawGuest = config.get('comment.guest.enabled');
   const guestEnabled = rawGuest !== false && rawGuest !== 'false';
+  const commentBlocked = isMaintenanceBlocked(profile, config, MAINTENANCE_CONFIG_KEYS.commentDisabled);
   const [isReplying, setIsReplying] = useState(false);
   const [likes, setLikes] = useState(comment.likes ?? 0);
   const [liked, setLiked] = useState(comment.liked ?? false);
@@ -1161,7 +1180,7 @@ function CommentItem({
               <span>{likes}</span>
             </span>
           ) : null}
-          {!isDeleted && (profile || guestEnabled) && (
+          {!isDeleted && !commentBlocked && (profile || guestEnabled) && (
             <button
               onClick={() => setIsReplying(true)}
               className="px-2 py bg-secondary rounded-full text-sm t-secondary hover:text-theme"

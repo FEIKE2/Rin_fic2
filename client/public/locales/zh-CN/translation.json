@@ -258,6 +258,9 @@
     "total$count_one": "{{count}} 条动态",
     "total$count_other": "{{count}} 条动态"
   },
+  "maintenance": {
+    "unavailable": "该功能维护中……"
+  },
   "next": "下一页",
   "previous_post": "该作者的上一篇",
   "next_post": "该作者的下一篇",
@@ -387,7 +390,19 @@
       }
     },
     "maintenance": {
-      "title": "维护"
+      "title": "维护",
+      "posting": {
+        "title": "冻结非管理员发帖",
+        "desc": "开启后，非管理员无法创建、编辑或删除自己的帖文；管理员不受影响。"
+      },
+      "upload": {
+        "title": "冻结非管理员上传",
+        "desc": "开启后，非管理员无法上传图片或文件；管理员不受影响。"
+      },
+      "comment": {
+        "title": "冻结非管理员评论",
+        "desc": "开启后，非管理员和游客无法发表评论或回复；点赞不受影响。"
+      }
     },
     "friend": {
       "apply": {
