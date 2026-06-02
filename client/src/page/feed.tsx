@@ -8,6 +8,7 @@ import Popup from "reactjs-popup";
 import { Link, useLocation } from "wouter";
 import { useAlert, useConfirm } from "../components/dialog";
 import { HashTag } from "../components/hashtag";
+import { CommentEmojiPicker } from "../components/comment-emoji-picker";
 import { Waiting } from "../components/loading";
 import { Markdown } from "../components/markdown";
 import { client } from "../app/runtime";
@@ -25,7 +26,6 @@ import { EditHistoryModal } from "../components/edit-history-modal";
 import { UserAvatarLink } from "../components/user-hover-card";
 import { HEADER_POPUP_PANEL_CLASS } from "../components/site-header/shared";
 import { buildMarkdownImage, generateImageMetadataFromUrl, uploadImageFile } from "../utils/image-upload";
-import { EMOJI_GROUPS } from "../utils/emoji";
 import { isMaintenanceBlocked, MAINTENANCE_CONFIG_KEYS } from "../utils/maintenance";
 
 const COMMENT_IMAGE_RE = /!\[[^\]]*\]\([^)]*\)/g;
@@ -688,41 +688,10 @@ function CommentInput({
     }
   }
 
-  // 渲染为内联函数调用（而非 <Component/>），避免每次输入都重挂载内部 Popup
+  // Toolbar stays inline so it can close over editor helpers without prop plumbing.
   const renderToolbar = () => (
     <div className="flex items-center gap-2">
-      <Popup
-        arrow={false}
-        position="top left"
-        closeOnDocumentClick
-        trigger={
-          <button type="button" title={t("comment.emoji")} className="bg-secondary bg-button t-secondary px-3 h-10 rounded-full leading-none inline-flex items-center justify-center">😀</button>
-        }
-      >
-        {((close: () => void) => (
-          <div className={`${HEADER_POPUP_PANEL_CLASS} max-h-64 w-72 overflow-y-auto`}>
-            {EMOJI_GROUPS.map((group) => (
-              <div key={group.key} className="emoji-group mb-1">
-                <p className="px-1 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
-                  {t(`emoji.group.${group.key}`)}
-                </p>
-                <div className="grid grid-cols-8 gap-0.5">
-                  {group.emojis.map((emoji, i) => (
-                    <button
-                      key={`${group.key}-${i}`}
-                      type="button"
-                      onClick={() => { insertAtCaret(emoji); close(); }}
-                      className="rounded text-xl leading-none hover:bg-black/5 dark:hover:bg-white/10 py-1"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )) as any}
-      </Popup>
+      <CommentEmojiPicker onSelect={insertAtCaret} />
       {showImageTool && (
         <Popup
           arrow={false}
