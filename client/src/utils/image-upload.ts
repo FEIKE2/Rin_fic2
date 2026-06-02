@@ -10,6 +10,9 @@ export type UploadedImageResult = {
   height?: number;
 };
 
+export type ImageDisplayMode = "wide" | "block" | "inline";
+export type ImageLayoutMode = "left" | "center" | "right";
+
 type ImageMetadata = {
   blurhash?: string;
   width?: number;
@@ -32,6 +35,48 @@ function toPositiveInteger(value?: string | null) {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function normalizeImageDisplay(value?: string | null): ImageDisplayMode | undefined {
+  if (value === "wide" || value === "block" || value === "inline") {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeImageLayout(value?: string | null): ImageLayoutMode | undefined {
+  if (value === "left" || value === "center" || value === "right") {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeImageSize(value?: string | null) {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim().toLowerCase();
+  if (trimmed === "sm" || trimmed === "md" || trimmed === "lg" || trimmed === "full") {
+    return trimmed;
+  }
+
+  const percent = /^(\d{1,3})(?:\.\d+)?%$/.exec(trimmed);
+  if (percent) {
+    const valueNum = Number.parseFloat(trimmed);
+    if (valueNum >= 10 && valueNum <= 100) {
+      return `${valueNum}%`;
+    }
+  }
+
+  const pixels = /^(\d{2,4})px$/.exec(trimmed);
+  if (pixels) {
+    const valueNum = Number.parseInt(pixels[1], 10);
+    if (valueNum >= 80 && valueNum <= 1600) {
+      return `${valueNum}px`;
+    }
+  }
+
+  return undefined;
 }
 
 export function attachImageMetadataToUrl(url: string, metadata: ImageMetadata = {}) {
@@ -70,6 +115,9 @@ export function parseImageUrlMetadata(url?: string | null) {
     blurhash: params.get("blurhash") || undefined,
     width: toPositiveInteger(params.get("width")),
     height: toPositiveInteger(params.get("height")),
+    display: normalizeImageDisplay(params.get("display")),
+    layout: normalizeImageLayout(params.get("layout")),
+    size: normalizeImageSize(params.get("size")),
   };
 }
 

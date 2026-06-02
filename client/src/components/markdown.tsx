@@ -23,6 +23,22 @@ import { parseImageUrlMetadata } from "../utils/image-upload";
 import { useImageLoadState } from "../utils/use-image-load-state";
 
 
+function getImageCssWidth(size?: string, display?: string) {
+  if (display === "wide") return "100%";
+  if (!size) return undefined;
+  if (size === "sm") return "min(100%, 320px)";
+  if (size === "md") return "min(100%, 520px)";
+  if (size === "lg") return "min(100%, 760px)";
+  if (size === "full") return "100%";
+  return size;
+}
+
+function getBlockAlignmentClass(layout?: string) {
+  if (layout === "left") return "text-left";
+  if (layout === "right") return "text-right";
+  return "text-center";
+}
+
 const countNewlinesBeforeNode = (text: string, offset: number) => {
   let newlinesBefore = 0;
   for (let i = offset - 1; i >= 0; i--) {
@@ -65,10 +81,18 @@ function MarkdownImage({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { src: cleanSrc, blurhash, width, height } = parseImageUrlMetadata(src);
+  const { src: cleanSrc, blurhash, width, height, display, layout, size } = parseImageUrlMetadata(src);
   const { failed, imageRef, loaded, onError, onLoad } = useImageLoadState(cleanSrc);
   const roundedClass = rounded ? "rounded-xl" : "";
   const aspectRatio = width && height ? `${width} / ${height}` : undefined;
+  const cssWidth = getImageCssWidth(size, display);
+  const hasCustomPresentation = Boolean(display || layout || size);
+  const wrapperStyle: React.CSSProperties = {
+    aspectRatio,
+    maxWidth: "100%",
+    ...(cssWidth ? { width: cssWidth } : {}),
+    ...(!hasCustomPresentation ? { zoom: scale } : {}),
+  };
 
   useEffect(() => {
     if (!blurhash || !canvasRef.current) {
@@ -84,7 +108,7 @@ function MarkdownImage({
   return (
     <span
       className={`relative inline-block max-w-full overflow-hidden ${roundedClass}`}
-      style={{ zoom: scale, aspectRatio }}
+      style={wrapperStyle}
     >
       {blurhash && !loaded ? (
         <canvas
@@ -104,7 +128,7 @@ function MarkdownImage({
         }}
         onLoad={onLoad}
         onError={onError}
-        className={`mx-auto max-w-full cursor-zoom-in transition-opacity ${roundedClass} ${className || ""} ${
+        className={`${hasCustomPresentation ? "h-auto w-full" : "mx-auto max-w-full"} cursor-zoom-in transition-opacity ${roundedClass} ${className || ""} ${
           blurhash && (!loaded || failed) ? "opacity-0" : "opacity-100"
         }`}
       />
@@ -131,12 +155,20 @@ export function Markdown({ content }: { content: string }) {
       rehypePlugins={[rehypeKatex, rehypeRaw]}
       components={{
         img({ node, src, ...props }) {
+          const imageMeta = parseImageUrlMetadata(src);
           const offset = node!.position!.start.offset!;
           const previousContent = content.slice(0, offset);
           const newlinesBefore = countNewlinesBeforeNode(
             previousContent,
             offset
           );
+          const isBlockByContext =
+            newlinesBefore >= 1 ||
+            previousContent.trim().length === 0 ||
+            isMarkdownImageLinkAtEnd(previousContent);
+          const forceInline = imageMeta.display === "inline";
+          const forceBlock = imageMeta.display === "block" || imageMeta.display === "wide" || Boolean(imageMeta.layout);
+          const shouldRenderBlock = forceInline ? false : forceBlock || isBlockByContext;
           const Image = ({
             rounded,
             scale,
@@ -153,13 +185,9 @@ export function Markdown({ content }: { content: string }) {
               className={props.className}
             />
           );
-          if (
-            newlinesBefore >= 1 ||
-            previousContent.trim().length === 0 ||
-            isMarkdownImageLinkAtEnd(previousContent)
-          ) {
+          if (shouldRenderBlock) {
             return (
-              <span className="block w-full text-center my-4">
+              <span className={`block w-full ${getBlockAlignmentClass(imageMeta.layout)} my-4`}>
                 <Image scale="0.75" rounded={true} />
               </span>
             );
