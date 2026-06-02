@@ -1,15 +1,26 @@
-import { describe, it, expect, mock } from 'bun:test';
+import "../../test/setup";
 import { render } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { EditHistoryModal } from '../edit-history-modal';
 import type { FeedEditHistory } from '@rin/api';
 
-mock.module('react-i18next', () => ({
+vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: any) => {
       if (key === 'edit_history.edited_by') return `Edited by ${params?.username || ''}`;
       return key;
     },
   }),
+}));
+
+vi.mock('../markdown', () => ({
+  Markdown: ({ content }: { content: string }) => <div>{content}</div>,
+}));
+
+vi.mock('react-modal', () => ({
+  default: ({ isOpen, children }: { isOpen: boolean; children?: ReactNode }) =>
+    isOpen ? <div className="ReactModal__Content">{children}</div> : null,
 }));
 
 describe('EditHistoryModal', () => {

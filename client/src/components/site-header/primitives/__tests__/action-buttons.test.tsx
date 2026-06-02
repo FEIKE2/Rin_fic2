@@ -26,6 +26,12 @@ vi.mock("react-modal", () => ({
 
 vi.mock("../../../../app/runtime", () => ({
   client: {
+    feed: {
+      list: vi.fn().mockResolvedValue({ data: { size: 0 } }),
+    },
+    interaction: {
+      bookmarks: vi.fn().mockResolvedValue({ data: [] }),
+    },
     user: {
       logout: vi.fn(),
     },
