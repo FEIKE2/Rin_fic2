@@ -610,6 +610,17 @@
   "status": "ステータス",
   "summary": "概要",
   "tags": "タグ",
+  "tag_selector": {
+    "create": "タグを追加",
+    "create_named": "{{tag}} を追加",
+    "empty": "選択できるタグはありません",
+    "max_exceeded": "1件の投稿に追加できるタグは最大 {{count}} 個です",
+    "max_hint": "上限に達しました",
+    "open": "タグ選択を開く",
+    "remove": "#{{tag}} を削除",
+    "search": "タグを検索または新規入力",
+    "selected_count": "{{count}} / {{max}} 選択済み"
+  },
   "timeline": "タイムライン",
   "title": "タイトル",
   "title_empty": "タイトルは空にできません",

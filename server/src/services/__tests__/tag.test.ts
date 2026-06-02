@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { TagService, bindTagToPost } from '../tag';
+import { TagLimitError, TagService, bindTagToPost, normalizeTags } from '../tag';
 import { Hono } from "hono";
 import type { Variables } from "../../core/hono-types";
 import { setupTestApp, seedTestData, cleanupTestDB } from '../../../tests/fixtures';
@@ -109,6 +109,42 @@ describe('TagService', () => {
     });
 
     describe('bindTagToPost function', () => {
+        it('should normalize tags before binding', async () => {
+            await bindTagToPost(db, 1, ['#normalized', '  spaced  ', '', '#normalized']);
+
+            const result = sqlite.prepare(`
+                SELECT h.name FROM hashtags h
+                JOIN feed_hashtags fh ON h.id = fh.hashtag_id
+                WHERE fh.feed_id = 1
+                ORDER BY h.name
+            `).all() as any[];
+
+            const tagNames = result.map((r: any) => r.name);
+            expect(tagNames).toEqual(['normalized', 'spaced']);
+            expect(tagNames).not.toContain('#normalized');
+        });
+
+        it('should reject more than 10 normalized tags', () => {
+            const tags = Array.from({ length: 11 }, (_, index) => `tag-${index}`);
+
+            expect(() => normalizeTags(tags)).toThrow(TagLimitError);
+        });
+
+        it('should not clear existing tags when new tags exceed limit', async () => {
+            await bindTagToPost(db, 1, ['stable']);
+
+            const tags = Array.from({ length: 11 }, (_, index) => `tag-${index}`);
+            await expect(bindTagToPost(db, 1, tags)).rejects.toThrow(TagLimitError);
+
+            const result = sqlite.prepare(`
+                SELECT h.name FROM hashtags h
+                JOIN feed_hashtags fh ON h.id = fh.hashtag_id
+                WHERE fh.feed_id = 1
+            `).all() as any[];
+
+            expect(result.map((r: any) => r.name)).toContain('stable');
+        });
+
         it('should bind tags to a feed', async () => {
             await bindTagToPost(db, 1, ['newtag1', 'newtag2']);
             

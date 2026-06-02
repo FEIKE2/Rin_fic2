@@ -14,9 +14,11 @@ import {siteName} from "../utils/constants";
 import { ProfileContext } from "../state/profile";
 import mermaid from 'mermaid';
 import { MarkdownEditor } from '../components/markdown_editor';
+import { formatTagsForCache, parseTagsFromCache, TagSelector } from '../components/tag-selector';
 
 function humanizeFeedError(value: string) {
   if (value === "Draft box is full") return i18n.t("draft_full");
+  if (value === "Tag limit exceeded") return i18n.t("tag_selector.max_exceeded", { count: 10 });
   if (value === "File count limit exceeded") return i18n.t("upload.file.count_limit_exceeded");
   if (value === "File size limit exceeded") return i18n.t("upload.file.size_limit_exceeded");
   if (value === "Unknown file attachment") return i18n.t("upload.file.unknown_attachment");
@@ -156,11 +158,7 @@ export function WritingPage({ id }: { id?: number }) {
       showAlert(t("content.empty"))
       return;
     }
-    const tagsplit =
-      tags
-        .split("#")
-        .filter((tag) => tag !== "")
-        .map((tag) => tag.trim()) || [];
+    const tagsplit = parseTagsFromCache(tags);
     // 普通用户存新草稿时检查草稿箱是否已满（最多 3 篇）
     if (asDraft && id === undefined && !isAdmin) {
       const { data } = await client.feed.list({ type: "draft", limit: 1 });
@@ -214,7 +212,7 @@ export function WritingPage({ id }: { id?: number }) {
           if (data) {
             if (title == "" && data.title) setTitle(data.title);
             if (tags == "" && data.hashtags)
-              setTags(data.hashtags.map(({ name }: {name: string}) => `#${name}`).join(" "));
+              setTags(formatTagsForCache(data.hashtags.map(({ name }: {name: string}) => name)));
             if (alias == "" && (data as any).alias) setAlias((data as any).alias);
             if (content == "") setContent(data.content);
             if (summary == "") setSummary((data as any).summary || "");
@@ -310,13 +308,11 @@ export function WritingPage({ id }: { id?: number }) {
               placeholder={t("alias")}
               variant="flat"
             />}
-            <Input
-              id={id}
+            <TagSelector
               value={tags}
               setValue={setTags}
-              placeholder={t("tags")}
-              variant="flat"
               className="lg:col-span-2"
+              onInvalid={showAlert}
             />
             {id !== undefined && (
               <Input

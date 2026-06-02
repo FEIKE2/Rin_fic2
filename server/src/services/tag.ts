@@ -5,6 +5,41 @@ import { profileAsync } from "../core/server-timing";
 import { feedHashtags, hashtags } from "../db/schema";
 import type { AppContext } from "../core/hono-types";
 
+export const MAX_FEED_TAGS = 10;
+
+export class TagLimitError extends Error {
+    status = 400;
+
+    constructor() {
+        super('Tag limit exceeded');
+        this.name = 'TagLimitError';
+    }
+}
+
+export function normalizeTagName(value: string) {
+    return value.trim().replace(/^#+/, '').trim();
+}
+
+export function normalizeTags(tags: unknown) {
+    if (!Array.isArray(tags)) return [];
+
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    for (const tag of tags) {
+        const normalized = normalizeTagName(String(tag));
+        if (!normalized || seen.has(normalized)) continue;
+        seen.add(normalized);
+        result.push(normalized);
+    }
+
+    if (result.length > MAX_FEED_TAGS) {
+        throw new TagLimitError();
+    }
+
+    return result;
+}
+
 export function TagService(): Hono {
     const app = new Hono();
 
@@ -75,9 +110,11 @@ export function TagService(): Hono {
 }
 
 export async function bindTagToPost(db: DB, feedId: number, tags: string[]) {
+    const normalizedTags = normalizeTags(tags);
+
     await db.delete(feedHashtags).where(eq(feedHashtags.feedId, feedId));
     
-    for (const tag of tags) {
+    for (const tag of normalizedTags) {
         const tagId = await getTagIdOrCreate(db, tag);
         await db.insert(feedHashtags).values({
             feedId: feedId,

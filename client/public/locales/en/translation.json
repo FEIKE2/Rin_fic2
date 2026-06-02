@@ -619,6 +619,17 @@
   "status": "Status",
   "summary": "Summary",
   "tags": "Tags",
+  "tag_selector": {
+    "create": "Add tag",
+    "create_named": "Add {{tag}}",
+    "empty": "No tags available",
+    "max_exceeded": "Each post can have at most {{count}} tags",
+    "max_hint": "Limit reached",
+    "open": "Open tag selector",
+    "remove": "Remove #{{tag}}",
+    "search": "Search or enter a new tag",
+    "selected_count": "{{count}} / {{max}} selected"
+  },
   "timeline": "Timeline",
   "title": "Title",
   "title_empty": "Title cannot be empty",

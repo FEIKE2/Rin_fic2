@@ -619,6 +619,17 @@
   "status": "状态",
   "summary": "简介",
   "tags": "标签",
+  "tag_selector": {
+    "create": "添加标签",
+    "create_named": "添加 {{tag}}",
+    "empty": "暂无可选标签",
+    "max_exceeded": "每篇帖文最多只能添加 {{count}} 个标签",
+    "max_hint": "已达上限",
+    "open": "打开标签选择器",
+    "remove": "移除 #{{tag}}",
+    "search": "搜索或输入新标签",
+    "selected_count": "已选择 {{count}} / {{max}}"
+  },
   "timeline": "时间轴",
   "title": "标题",
   "title_empty": "标题不能为空",

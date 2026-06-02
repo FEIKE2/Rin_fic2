@@ -619,6 +619,17 @@
   "status": "狀態",
   "summary": "簡介",
   "tags": "標籤",
+  "tag_selector": {
+    "create": "新增標籤",
+    "create_named": "新增 {{tag}}",
+    "empty": "暫無可選標籤",
+    "max_exceeded": "每篇帖文最多只能新增 {{count}} 個標籤",
+    "max_hint": "已達上限",
+    "open": "打開標籤選擇器",
+    "remove": "移除 #{{tag}}",
+    "search": "搜尋或輸入新標籤",
+    "selected_count": "已選擇 {{count}} / {{max}}"
+  },
   "timeline": "時間軸",
   "title": "標題",
   "title_empty": "標題不能為空",

@@ -17,6 +17,7 @@ export function stripMarkdown(input: string): string {
     .replace(/!\[[^\]]*\]?\([^)]*$/g, " ")
     .replace(/!\[[^\]]*$/g, " ")
     // 链接 [text](url) -> text
+    .replace(/\[([^\]]*)\]\([^)]*$/g, "$1")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     // 行内代码 `code` -> code
     .replace(/`([^`]+)`/g, "$1")

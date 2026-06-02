@@ -6,7 +6,7 @@ import { feeds, visits, visitStats, feedEditHistory } from "../db/schema";
 import { HyperLogLog } from "../utils/hyperloglog";
 import { extractImageWithMetadata } from "../utils/image";
 import { syncFeedAISummaryQueueState } from "./feed-ai-summary";
-import { bindTagToPost } from "./tag";
+import { bindTagToPost, normalizeTags, TagLimitError } from "./tag";
 import { clearFeedCache } from "./clear-feed-cache";
 import { adjustFeedDynamicHotScore, getHotConfig, updateFeedContentHotScore } from "./hot-score";
 import { enforceFileAttachmentLimits, FileAttachmentLimitError } from "./file-attachments";
@@ -153,6 +153,15 @@ export function FeedService(): Hono<{
         if (!content) {
             return c.text('Content is required', 400);
         }
+        let normalizedTags: string[];
+        try {
+            normalizedTags = normalizeTags(tags);
+        } catch (error) {
+            if (error instanceof TagLimitError) {
+                return c.text(error.message, error.status as any);
+            }
+            throw error;
+        }
         try {
             await profileAsync(c, 'feed_create_file_limit_check', () =>
                 enforceFileAttachmentLimits(db, serverConfig, content, Boolean(admin), Number(uid))
@@ -210,7 +219,7 @@ export function FeedService(): Hono<{
 
         await profileAsync(c, 'feed_create_hot_score', () => updateFeedContentHotScore(db, serverConfig, result[0].insertedId, content));
 
-        await profileAsync(c, 'feed_create_tags', () => bindTagToPost(db, result[0].insertedId, tags));
+        await profileAsync(c, 'feed_create_tags', () => bindTagToPost(db, result[0].insertedId, normalizedTags));
         await profileAsync(c, 'feed_create_ai_queue', () => syncFeedAISummaryQueueState(db, serverConfig, env, result[0].insertedId, {
             draft: Boolean(draft),
             updatedAt: date,
@@ -445,6 +454,18 @@ export function FeedService(): Hono<{
             return c.text('Permission denied', 403);
         }
 
+        let normalizedTags: string[] | undefined;
+        if (tags !== undefined) {
+            try {
+                normalizedTags = normalizeTags(tags);
+            } catch (error) {
+                if (error instanceof TagLimitError) {
+                    return c.text(error.message, error.status as any);
+                }
+                throw error;
+            }
+        }
+
         const contentChanged = content && content !== feed.content;
         const titleChanged = title && title !== feed.title;
         const summaryChanged = summary !== undefined && summary !== feed.summary;
@@ -498,8 +519,8 @@ export function FeedService(): Hono<{
             await profileAsync(c, 'feed_update_hot_score', () => updateFeedContentHotScore(db, serverConfig, id_num, content));
         }
 
-        if (tags) {
-            await profileAsync(c, 'feed_update_tags', () => bindTagToPost(db, id_num, tags));
+        if (normalizedTags !== undefined) {
+            await profileAsync(c, 'feed_update_tags', () => bindTagToPost(db, id_num, normalizedTags));
         }
 
         if (shouldQueueAISummary || isDraft) {
